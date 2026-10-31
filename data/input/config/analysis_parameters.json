@@ -1,0 +1,12 @@
+{
+  "measured_parameters_analysis": {
+    "k_NN": 5,
+    "max_distance": 0.3
+  },
+  "TTL": 2,
+  "audit_parameters": {
+    "damage_score": 30,
+    "threshold": 50,
+    "merit_score": 20
+  }
+}

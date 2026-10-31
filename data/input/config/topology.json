@@ -1,0 +1,144 @@
+{
+  "network_id": "city_network_001",
+  "network_name": "Città Simulata - Centro Urbano",
+  "network_description": "Rete stradale urbana direzionale in cui i nodi rappresentano incroci controllati da semafori e i link rappresentano strade a senso unico. Gli obiettivi descrivono i criteri che ogni semaforo può perseguire per migliorare il flusso del traffico.",
+  "network_goals": [
+    {
+      "goal_id": "goal_wait_time",
+      "description": "Ridurre il tempo medio di attesa dei veicoli agli incroci."
+    },
+    {
+      "goal_id": "goal_congestion",
+      "description": "Prevenire e ridurre la congestione sulle strade in ingresso e in uscita dall'incrocio."
+    },
+    {
+      "goal_id": "goal_throughput",
+      "description": "Massimizzare il numero di veicoli che attraversano l'incrocio nell'unità di tempo."
+    },
+    {
+      "goal_id": "goal_pedestrian_safety",
+      "description": "Garantire attraversamenti pedonali sicuri e tempi adeguati per i pedoni."
+    },
+    {
+      "goal_id": "goal_emergency_priority",
+      "description": "Favorire il passaggio rapido e sicuro dei mezzi di emergenza quando necessario."
+    },
+    {
+      "goal_id": "goal_fairness",
+      "description": "Evitare che una direzione del traffico rimanga in attesa troppo a lungo rispetto alle altre."
+    },
+    {
+      "goal_id": "goal_emissions",
+      "description": "Ridurre le emissioni limitando soste prolungate, ripartenze frequenti e code."
+    }
+  ],
+  "nodes": [
+    {
+      "node_id": "N01",
+      "node_name": "Incrocio Centrale",
+      "node_goals": [
+        "goal_wait_time",
+        "goal_congestion",
+        "goal_throughput",
+        "goal_fairness"
+      ]
+    },
+    {
+      "node_id": "N02",
+      "node_name": "Incrocio Nord",
+      "node_goals": [
+        "goal_wait_time",
+        "goal_pedestrian_safety",
+        "goal_emissions"
+      ]
+    },
+    {
+      "node_id": "N03",
+      "node_name": "Incrocio Est",
+      "node_goals": [
+        "goal_congestion",
+        "goal_throughput",
+        "goal_emergency_priority"
+      ]
+    },
+    {
+      "node_id": "N04",
+      "node_name": "Incrocio Sud",
+      "node_goals": [
+        "goal_wait_time",
+        "goal_fairness",
+        "goal_pedestrian_safety"
+      ]
+    },
+    {
+      "node_id": "N05",
+      "node_name": "Incrocio Ovest",
+      "node_goals": [
+        "goal_congestion",
+        "goal_emissions",
+        "goal_throughput"
+      ]
+    },
+    {
+      "node_id": "N06",
+      "node_name": "Ingresso Zona Ospedaliera",
+      "node_goals": [
+        "goal_emergency_priority",
+        "goal_wait_time",
+        "goal_pedestrian_safety"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "link_id": "L01",
+      "source": "N02",
+      "target": "N01"
+    },
+    {
+      "link_id": "L02",
+      "source": "N01",
+      "target": "N03"
+    },
+    {
+      "link_id": "L03",
+      "source": "N03",
+      "target": "N04"
+    },
+    {
+      "link_id": "L04",
+      "source": "N04",
+      "target": "N05"
+    },
+    {
+      "link_id": "L05",
+      "source": "N05",
+      "target": "N01"
+    },
+    {
+      "link_id": "L06",
+      "source": "N01",
+      "target": "N02"
+    },
+    {
+      "link_id": "L07",
+      "source": "N03",
+      "target": "N06"
+    },
+    {
+      "link_id": "L08",
+      "source": "N06",
+      "target": "N04"
+    },
+    {
+      "link_id": "L09",
+      "source": "N05",
+      "target": "N03"
+    },
+    {
+      "link_id": "L10",
+      "source": "N02",
+      "target": "N05"
+    }
+  ]
+}
