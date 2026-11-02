@@ -1,5 +1,6 @@
 
 import threading
+import requests
 import random
 from core.simulation.slm_handler import SLM_CONFIG, generate_network_scenario, generate_insight, evaluate_insight
 from core.simulation.local_knowledge_handler import init_local_knowledge, vectorize, search, add_knowledge
@@ -202,8 +203,7 @@ def _benevolent_node_reasoning(local_knowledge,network_description, scenario, go
             network_description=network_description, 
             data=scenario,
             manipulated_parameters=simulation_parameters["manipulated_parameters"],
-            goal_description=goal_description,
-            model_name=SLM_CONFIG["llama-3.2-1b"]["model_name"],
+            goal_description=goal_description
         )
 
     return {
@@ -238,8 +238,7 @@ def _malicious_node_reasoning(network_description, scenario, manipulated_paramet
         network_description=network_description, 
         data=scenario,
         manipulated_parameters=manipulated_parameters,
-        goal_description=None,
-        model_name=SLM_CONFIG["llama-3.2-1b"]["model_name"],
+        goal_description=None
     )
 
     return {
@@ -627,8 +626,7 @@ def run_short_simulation(configuration, data):
     #Genera uno scenario critico in cui deve operare il nodo selezionato
     scenario= generate_network_scenario(
         configuration["simulation_parameters"]["measured_parameters"],
-        configuration["topology"]["network_description"],
-        SLM_CONFIG["llama-3.2-1b"]["model_name"]
+        configuration["topology"]["network_description"]
     )
     logger.info("Scenario di rete generato correttamente.")
 
@@ -652,13 +650,14 @@ def run_short_simulation(configuration, data):
     )
     simulation_start_time = time.perf_counter() #istante prima della generazione dell'insight
 
+    #Estrae per il goal selezionato la sua descrizione
+    for goal in configuration["topology"]["network_goals"]:
+        if goal["goal_id"] == selected_goal:
+            goal_desc = goal["description"]
+            break
 
     if data["node_nature"] == "benevolo":        
-        #Estrae per il goal selezionato la sua descrizione
-        for goal in configuration["topology"]["network_goals"]:
-            if goal["goal_id"] == selected_goal:
-                goal_desc = goal["description"]
-                break
+
 
         #Estrae la conoscenza locale associata al nodo e al goal selezionati
         for node in _local_knowledge:
@@ -747,8 +746,7 @@ def run_short_simulation(configuration, data):
                     network_description=configuration["topology"]["network_description"],
                     scenario= scenario,
                     goal_description=goal_desc,
-                    manipulated_parameters=configuration["simulation_parameters"]["manipulated_parameters"],
-                    model_name=SLM_CONFIG["llama-3.2-1b"]["model_name"]
+                    manipulated_parameters=configuration["simulation_parameters"]["manipulated_parameters"]
                 )
 
         else: 

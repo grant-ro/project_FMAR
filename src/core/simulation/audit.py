@@ -80,7 +80,7 @@ def get_node_true_nature( node_id):
     """
     return _nodes_nature[node_id]["true"]
 
-def audit_reasoning(network_description,scenario, goal_description,manipulated_parameters, model_name):
+def audit_reasoning(network_description,scenario, goal_description,manipulated_parameters, model_name="qwen-rete"):
     """Genera l'insight  di un nodo della rete affidandosi a un SLM.
 
     Args:
@@ -103,7 +103,7 @@ def audit_reasoning(network_description,scenario, goal_description,manipulated_p
         data=scenario,
         manipulated_parameters=manipulated_parameters,
         goal_description=goal_description,
-        model_name=SLM_CONFIG["llama-3.1-8b"]["model_name"]
+        model_name=model_name
     )
 
     return insight

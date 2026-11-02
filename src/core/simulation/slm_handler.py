@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # Configurazione dei modelli SLM/LLM
 SLM_CONFIG = {
     "llama-3.2-1b": {
-        "url": "http://127.0.0.1:11434/v1/chat/completions",  # Llama 3.2 1B
+        "url": "http://127.0.0.1:11433/v1/chat/completions",  # Llama 3.2 1B
         "model_name": "llama-3.2-1b",
     },
     "llama-3.1-8b": {
@@ -23,6 +23,10 @@ SLM_CONFIG = {
         "url": "http://127.0.0.1:11436/v1/chat/completions",  # Modello specializzato Telco derivato dal modello 1B
         "model_name": "llama-telco",
     },
+    "qwen-rete":{
+        "url": "http://127.0.0.1:11434/v1/chat/completions",  # Modello ollama 4B
+        "model_name": "qwen-rete",
+    }
 }
 
 
@@ -277,10 +281,500 @@ def _parse_model_json(content):
 
 
 
+def _generate_scenario_description(network_description,measured_parameters,  model_name="llama-3.2-1b"):
+    """Genera la descrizione di uno scenario simulato di un problema o di una condizione anomala di rete.
+
+    La funzione interroga un modello linguistico locale fornendo la descrizione della rete. 
+    Il modello genera uno scenario plausibile restituendo il risultato come una stringa.
+
+    Args:
+        network_description: Descrizione delle caratteristiche della rete di comunicazione da analizzare.
+        measured_parameters: Lista di dizionari contenenti i parametri misurabili, ciascuno con nome, descrizione e unità di misura.
+        model_name: Nome del modello linguistico da utilizzare (deve essere presente nella configurazione ``_SLM_CONFIG``)
+
+    Returns: stringa che costituisce la descrizione dello scenario generato
+     
+    Raises:
+        ValueError, Se il modello linguistico produce un risultato non conforme al formato atteso oppure con valori non validi 
+        Altri tipi di eccezione se fallisce la comunicazione HTTP con il server del modello.
+    """
+    logger.info("Avvio generazione dello scenario di rete con modello '%s'.", model_name)
+
+    parameters_description = "\n".join(
+        f'- Nome: {p["name"]}; '
+        f'Descrizione: {p["description"]}; '
+        for p in measured_parameters
+    )
+
+    system_prompt = textwrap.dedent(f"""
+        Sei un generatore di scenari simulati di anomalie per reti. Descrizione della rete: {network_description}
+
+        OBIETTIVO:
+        Il tuo compito è descrivere UN SOLO problema o una condizione anomala plausibile della rete descritta.
+
+        REGOLE:
+        - L'anomalia deve essere specifica e localizzata.
+        - Il problema deve essere realistico e coerente con la rete.
+        - Descrivi un solo problema, non più anomalie contemporaneamente.
+        - Evita situazioni estreme o catastrofiche.
+        - La rete deve continuare a funzionare, anche se presenta
+          il problema descritto.
+        - Non inventare componenti o caratteristiche non presenti
+          nella descrizione della rete.
+        - Non generare valori numerici o modifiche ai parametri.
+
+        OUTPUT:
+        Restituisci esclusivamente una breve descrizione testuale
+        dell'anomalia, composta da una o due frasi.
+        Non utilizzare JSON, elenchi o Markdown.
+    """).strip()
+
+    # Prompt utente
+    user_prompt = textwrap.dedent(f"""
+
+        Genera una singola anomalia plausibile e localizzata compatibile con questa rete. 
+        L'anomalia può essere dedotta da alcuni di questi parametri: {parameters_description}
+        Produci soltanto una breve descrizione, due frasi non lunghe, che descrivono l'anomalia generata 
+
+        Descrivi brevemente:
+        - Quale problema si verifica.
+        - Quale possibile causa lo determina.
+        - Quale effetto produce sulla rete.
+
+        Non generare valori numerici.
+        Restituisci soltanto la descrizione dello scenario, senza includere il processo
+        di ragionamento interno.
+    """).strip()
+
+    server_url=SLM_CONFIG[model_name]["url"]
+
+    #Solleva un'eccezione se vi sono errori di timeout, connessione al server, URL non valido e altri problemi durante l'invio della richiesta HTTP.
+    response = requests.post(
+        server_url,
+        json={
+            "model":model_name,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ],
+            "temperature": 0.5,
+            "max_tokens": 4096,
+            "stream": False,
+             **(
+                {
+                    "reasoning_effort": "low",
+                    "options": {
+                        "num_ctx": 4096
+                    }
+                }
+                if model_name.startswith("qwen-rete")
+                else {}
+             )
+            },
+        timeout=120
+    )
+
+    #Solleva un'eccezione se il server restituisce un errore HTTP
+    response.raise_for_status()
+
+    # Estrazione della risposta
+    try:
+        result = response.json()
+        scenario_description = (
+            result["choices"][0]["message"]
+        )
+
+        logger.info("CONTENT: %r", scenario_description.get("content"))
+        logger.info("REASONING: %r", scenario_description.get("reasoning"))
+        logger.info("FINISH_REASON: %r",
+                    result["choices"][0].get("finish_reason"))
+
+    except (ValueError, KeyError, IndexError, TypeError) as exc:
+        raise ValueError(
+            "Il server ha restituito una risposta non conforme."
+        ) from exc
+
+    # Verifica che la risposta sia una strina non vuota
+    #altrimenti solleva un'eccezione
+    if not isinstance(scenario_description, str):
+        raise ValueError("La descrizione generata non è una stringa.")
+
+    scenario_description = scenario_description.strip()
+
+    if not scenario_description:
+        raise ValueError("Il modello ha generato una descrizione vuota.")
+
+    logger.info(
+        "Scenario prodotto dal modello:\n%s",
+        scenario_description
+    )
+
+    return scenario_description
+
+def _select_parameters(scenario_description, measured_parameters, model_name="llama-3.2-1b"):
+    """Seleziona tra i parametri misurabili quelli che possono segnalare l'anomalia descritta in scenario_description.
+
+    La funzione interroga un modello linguistico locale fornendo la descrizione dello scenario e i parametri misurabili. 
+    Il modello genera uno lista dei parametri affetti dallo scenario in formato JSON.
+
+    Args:
+        scenario_description: descrizione dello scenario anomalo corrente
+        measured_parameters: Lista di dizionari contenenti i parametri misurabili, ciascuno con nome, descrizione e unità di misura.
+        model_name: Nome del modello linguistico da utilizzare (deve essere presente nella configurazione ``_SLM_CONFIG``)
+
+    Returns: Lista del nome dei parametri affetti dallo scenario anomalo
+    
+    Raises:
+        ValueError, Se il modello linguistico produce un risultato non conforme al formato atteso oppure con valori non validi 
+        Altri tipi di eccezione se fallisce la comunicazione HTTP con il server del modello.
+    """
+    logger.info("Avvio selezione parametri affetti dallo scenario di anomalia di rete con modello '%s'.", model_name)
+
+    parameters_description = "\n".join(
+        f'- Nome: {p["name"]}; '
+        f'Descrizione: {p["description"]}; '
+        for p in measured_parameters
+    )
+
+    parameter_names = [p["name"] for p in measured_parameters]
+
+    system_prompt = textwrap.dedent("""
+        Sei un esperto di reti.
+        Il tuo compito è individuare quali parametri misurabili sono direttamente coinvolti in una specifica anomalia.
+
+        REGOLE:
+        1. Seleziona soltanto i parametri che possono segnalare
+           direttamente il problema descritto.
+        2. Seleziona da pochi parametri, se pertinenti.
+        3. Non selezionare parametri coinvolti marginalmente.
+        4. Non selezionare parametri solo perché appartengono
+           allo stesso sistema.
+        5. Basa la selezione esclusivamente sul significato
+           del parametro, sulla sua descrizione.
+        6. Non inventare nomi di parametri.
+        7. Seleziona soltanto parametri presenti nella lista.
+
+        OUTPUT:
+        Restituisci esclusivamente un oggetto JSON con la seguente struttura:
+
+        {
+            "involved_parameters": ["nome_parametro_1", "nome_parametro_2"]
+        }
+
+        
+        Non aggiungere spiegazioni o testo esterno.
+    """).strip()
+
+    # 3. Prompt utente
+    user_prompt = textwrap.dedent(f"""
+        ANOMALIA DA ANALIZZARE: {scenario_description}
+
+        PARAMETRI DISPONIBILI:{parameters_description}
+
+        Seleziona i parametri che possono rilevare direttamente
+        l'anomalia descritta.
+
+        Ricorda:
+        - Seleziona soltanto parametri pertinenti.
+        - Non selezionare parametri non coinvolti.
+        - Usa esattamente i nomi presenti nella lista.
+
+        Restituisci esclusivamente il JSON richiesto.
+    """).strip()
+
+    server_url=SLM_CONFIG[model_name]["url"]
+
+    #Solleva un'eccezione se vi sono errori di timeout, connessione al server, URL non valido e altri problemi durante l'invio della richiesta HTTP.
+    response = requests.post(
+        server_url,
+        json={
+            "model":model_name,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 256,
+            "stream": False,
+            "response_format": {"type": "json_object"},
+            **(
+                {"reasoning_effort": "none"}
+                if model_name.startswith("qwen-rete")
+                else {}
+             )
+        },
+        timeout=120
+    )
+ 
+    #Solleva un'eccezione se il server restituisce un errore HTTP
+    response.raise_for_status()
+
+    # Estrazione della risposta
+    try:
+        result = response.json()
+
+        content = result["choices"][0]["message"]["content"]
+
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("Il modello ha restituito una risposta vuota.")
+
+        # Conversione del testo JSON in dizionario Python
+        result_json = json.loads(content.strip())
+
+        if not isinstance(result_json, dict):
+            raise ValueError("Il modello deve restituire un oggetto JSON.")
+
+        selection = result_json.get("involved_parameters")
+
+    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
+        raise ValueError(
+            "Il modello ha restituito una risposta JSON non valida."
+        ) from exc
+
+    #Verifica che la selezione sia una lista di nomi di parametri presenti in measured_parameters
+    if not isinstance(selection, list):
+        raise ValueError("Il campo 'involved_parameters' deve contenere una lista.")
+
+    if not all(isinstance(name, str) for name in selection):
+        raise ValueError("La lista deve contenere esclusivamente nomi di parametri.")
+
+    if len(selection) != len(set(selection)):
+        raise ValueError("La lista contiene parametri duplicati.")
+
+    if not all(name in parameter_names for name in selection):
+        raise ValueError("Il modello ha restituito uno o più parametri non presenti nella lista.")
+
+    logger.info(
+        "Parametri selezionati dal modello:\n%s",
+        selection
+    )
+
+    return selection
+
+def _generate_parameters_value(scenario_description,measured_parameters, selected_parameters, model_name="llama-3.2-1b"):
+    """Genera il valore che avrebbero i measured_parameters nello scenario descritto
+
+    La funzione interroga un modello linguistico locale fornendo la descrizione dell'anomalia, i parametri misurabili, la lista dei parametri affetti dall'anomalia. 
+    Il modello assegna un valore numerico simulato e plausibile a ciascun parametro misurabile,restituendo i risultati in formato JSON.
+
+    Args:
+        measured_parameters: Lista di dizionari contenenti i parametri misurabili, ciascuno con nome, descrizione e unità di misura.
+        selected_parameters: Lista dei parametri misurabili affetti dall'anomalia
+        scenario_description: Descrizione dell'anomalia.
+        model_name: Nome del modello linguistico da utilizzare (deve essere presente nella configurazione ``_SLM_CONFIG``)
+
+    Returns: Dizionario avente struttura:
+     -chiave= nome del parametro misurato,
+     -valore= valore generato dal modello linguistico 
+
+    Raises:
+        ValueError, Se il modello linguistico produce un risultato non conforme al formato atteso oppure con valori non validi 
+        Altri tipi di eccezione se fallisce la comunicazione HTTP con il server del modello.
+    """
+
+    logger.info("Avvio generazione dei valori dei parametri misurabili con modello '%s'.", model_name)
+
+    parameters_description = "\n".join(
+        f'- Nome: {p["name"]}; '
+        f'Descrizione: {p["description"]}; '
+        f'Unità: {p["unit"]};'
+        f'Min: {p["min"]}; Max: {p["max"]}'
+        for p in measured_parameters
+    )
+
+    expected_names = [p["name"] for p in measured_parameters]
+
+    not_selected_parameters = [
+        name for name in expected_names
+        if name not in selected_parameters
+    ]
+    expected_format = {
+            name: "<valore plausibile>" for name in expected_names
+    }
+
+    format_description = json.dumps(
+        expected_format,
+        indent=4,
+        ensure_ascii=False
+    )
+
+    system_prompt = textwrap.dedent("""
+        Sei un esperto di reti e sistemi di monitoraggio.
+
+        Il tuo compito è generare valori numerici simulati per tutti i
+        parametri misurabili di una rete, considerando uno scenario anomalo.
+
+        Devi rispettare rigorosamente le seguenti regole:
+
+        1. Genera un valore per ciascun parametro fornito.
+        2. I parametri indicati come coinvolti nell'anomalia devono
+           assumere valori coerenti con la descrizione dello scenario.
+        3. I parametri indicati come NON coinvolti nell'anomalia devono mantenere
+           valori che indicano assenza di anomalia. 
+        4. Non modificare artificialmente i parametri non coinvolti
+           per renderli coerenti con l'anomalia.
+        5. Rispetta sempre l'unità di misura e i limiti minimi e massimi indicati.
+        6. Genera esclusivamente valori numerici.
+        7. Non generare valori nulli, stringhe o valori booleani.
+        8. Non inventare parametri aggiuntivi e non omettere parametri.
+
+        Restituisci esclusivamente un oggetto JSON nel seguente formato:
+
+        {
+            "nome_parametro_1": 12.5,
+            "nome_parametro_2": 30
+        }
+
+        Non aggiungere spiegazioni, commenti o testo al di fuori
+        dell'oggetto JSON.
+    """).strip()
+
+    user_prompt = textwrap.dedent(f"""
+        Descrizione dello scenario anomalo:{scenario_description}
+        Elenco completo dei parametri misurabili: {json.dumps(measured_parameters, ensure_ascii=False)}
+        Genera un valore numerico per ciascun parametro.
+
+        Struttura JSON richiesta: {format_description}
+
+        Assegna ai seguenti parametri valori conformi all'anomalia:
+        Parametri coinvolti nell'anomalia: {json.dumps(selected_parameters, ensure_ascii=False)}
+
+        Assegna ai seguenti parametri valori normali, come se l'anomalia fosse assente:
+        Parametri non coinvolti nell'anomalia: {json.dumps(selected_parameters, ensure_ascii=False)}
+
+        Ricorda:
+        - I parametri coinvolti devono riflettere l'anomalia descritta.
+        - Tutti gli altri parametri devono rappresentare condizioni
+          normali di funzionamento.
+        - Rispetta i limiti minimi e massimi specificati: ogni parametro deve avere un valore 
+        superiore al suo minimo min e inferiore al suo massimo max.
+    """).strip()
+
+    server_url=SLM_CONFIG[model_name]["url"]
+
+    #Solleva un'eccezione se vi sono errori di timeout, connessione al server, URL non valido e altri problemi durante l'invio della richiesta HTTP.
+    response = requests.post(
+        server_url,
+        json={
+            "model":model_name,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 256,
+            "stream": False,
+            "response_format": {"type": "json_object"},
+            **(
+                {"reasoning_effort": "none"}
+                if model_name.startswith("qwen-rete")
+                else {}
+             )
+        },
+        timeout=120
+    )
+ 
+    #Solleva un'eccezione se il server restituisce un errore HTTP
+    response.raise_for_status()
+
+    # Estrazione della risposta del modello
+    try:
+        result = response.json()
+        content = result["choices"][0]["message"]["content"]
+
+        logger.info(
+            "Valori dei parametri prodotti dal modello (risposta grezza):\n%s",
+            content
+        )
+
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("Il modello ha restituito una risposta vuota.")
+        
+        generated_values = _parse_model_json(content)
+
+    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
+        raise ValueError(
+            "Il modello ha restituito una risposta non conforme "
+            "al formato JSON atteso."
+        ) from e
+
+    # Verifica che la risposta sia un dizionario con tutti i parametri attesi
+    #altrimenti solleva un'eccezione
+    if not isinstance(generated_values, dict):
+        raise ValueError("Il risultato generato deve essere un oggetto JSON.")
+
+    if set(generated_values.keys()) != set(expected_names):
+        raise ValueError(
+            "Il modello non ha restituito esattamente tutti i parametri "
+            "misurabili."
+        )
+
+    # Verifica il modello abbia assegnato a tutti i parametri attesi dei valori numerici
+    #altrimenti solleva un'eccezione
+    for parameter in measured_parameters:
+        name = parameter["name"]
+        value = generated_values[name]
+
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(
+                f"Il valore del parametro '{name}' non è numerico."
+            )
+
+        if not math.isfinite(value):
+            raise ValueError(
+                f"Il valore del parametro '{name}' non è finito."
+            )
+
+        min_value = parameter.get("min")
+        max_value = parameter.get("max")
+        
+        #Verifica che ogni parametri abbia un valore che rientri nei limiti
+        #altrimenti lo imposta al minimo/massimo
+        if min_value is not None and value < min_value:
+            logger.warning(
+                f"Il valore di '{name}' è inferiore al limite minimo "
+                f"({min_value}). Il valore verrà impostato al minimo."
+            )
+            value = min_value
+
+
+        if max_value is not None and value > max_value:
+            logger.warning(
+                f"Il valore di '{name}' supera il limite massimo "
+                f"({max_value}). Il valore verrà impostato al massimo."
+                )
+            value = max_value
+
+    logger.info(
+        "Valori dei parametri prodotti dal modello (risposta verificata):\n%s",
+        generated_values
+    )
+
+    return generated_values
+
+
 def generate_network_scenario(
     measured_parameters, 
     network_description,
-    model_name="llama-3.2-1b",
+    model_name="qwen-rete",
 ):
     """Genera uno scenario simulato di un problema o di una condizione anomala di rete.
 
@@ -303,234 +797,42 @@ def generate_network_scenario(
         ValueError, Se il modello linguistico produce un risultato non conforme al formato atteso oppure con valori non validi 
         Altri tipi di eccezione se fallisce la comunicazione HTTP con il server del modello.
     """
-    logger.info("Avvio generazione dello scenario di rete con modello '%s'.", model_name)
+    logger.info("Avvio generazione dello scenario di rete e valorizzazione dei parametri misurabili con modello '%s'.", model_name)
 
-    parameters_description = "\n".join(
-        f'- Nome: {p["name"]}; '
-        f'Descrizione: {p["description"]}; '
-        f'Unità: {p["unit"]}'
-        f'Min: {p["min"]}; Max: {p["max"]}'
-        for p in measured_parameters
+    #Genera lo scenario di rete anomalo
+    scenario_description = _generate_scenario_description(
+        network_description=network_description,
+        measured_parameters=measured_parameters,
+        model_name=model_name
     )
 
-    expected_names = [p["name"] for p in measured_parameters]
+    #Effettua la selezione dei parametri coinvolti nell'anomalia
+    selected_parameters = _select_parameters(
+        scenario_description=scenario_description,
+        measured_parameters=measured_parameters,
+        model_name=model_name
+    )
 
-    expected_format = {
-        "scenario_description": "Descrizione dello scenario problematico ideato da te",
-        "measured_parameters": {
-            name: "<valore plausibile>" for name in expected_names
-        }
+    #Genera i valori per tutti i parametri
+    generated_values = _generate_parameters_value(
+        scenario_description=scenario_description,
+        measured_parameters=measured_parameters,
+        selected_parameters=selected_parameters,
+        model_name=model_name
+    )
+
+    result_data= {
+        "scenario_description": scenario_description,
+        "measured_parameters": generated_values
     }
-
-    format_description = json.dumps(
-        expected_format,
-        indent=4,
-        ensure_ascii=False
-    )
-
-    system_prompt = textwrap.dedent(f"""
-    Sei un generatore di scenari simulati di anomalie per reti. Descrizione della rete: {network_description}
-
-    OBIETTIVO:
-    Genera UN SOLO scenario anomalo, realistico e coerente
-    con il funzionamento della rete.
-    
-    1. Genera una sola anomalia specifica e localizzata.
-
-    2. Identifica i parametri direttamente coinvolti
-    nell'anomalia.
-
-    3. Modifica principalmente i parametri coinvolti,
-    assegnando valori anomali ma realistici.
-
-    4. Mantieni normali tutti i parametri non coinvolti.
-
-    5. Non modificare un parametro se non esiste
-    una motivazione legata all'anomalia.
-
-    6. Non è necessario che tutti i parametri segnalino
-    un'anomalia. Anche un solo parametro anomalo
-    può essere sufficiente.
-
-    7. Evita valori estremi, combinazioni irrealistiche
-    e anomalie che compromettano inutilmente
-    l'intera rete.
-
-    8. Rispetta sempre nomi, unità e limiti dei parametri.
-
-    9. Genera esclusivamente valori numerici finiti.
-
-    10. Tutti i valori sono simulati, non misurazioni reali.
-
-    OUTPUT:
-    Restituisci esclusivamente un oggetto JSON valido.
-    Non aggiungere spiegazioni o testo esterno.
-    """
-    ).strip()
-
-    user_prompt = textwrap.dedent(f"""
-    Parametri disponibili:{parameters_description}
-    Struttura JSON richiesta: {format_description}
-
-    ISTRUZIONI PER GENERARE LO SCENARIO:
-
-    1. Scegli UNA sola anomalia compatibile con
-    il tipo di rete.
-
-    2. Individua quali parametri sono direttamente
-    coinvolti in questa anomalia.
-
-    3. PARAMETRI COINVOLTI:
-    Modifica da 1 a 3 parametri direttamente collegati
-    al problema. Assegna valori che rappresentino
-    l'anomalia in modo moderato e realistico.
-
-    4. PARAMETRI NON COINVOLTI:
-    Assegna valori normali e coerenti con il normale
-    funzionamento della rete.
-    Non modificarli per rendere lo scenario
-    più evidente.
-
-    5. Non considerare automaticamente anomali
-    tutti i parametri correlati al problema.
-    Modifica un parametro secondario solo se
-    esiste una relazione plausibile.
-
-    6. Tutti i valori devono rispettare i limiti
-    minimi e massimi specificati.
-
-    7. Non utilizzare valori estremi o combinazioni
-    fisicamente o tecnicamente irrealistiche.
-
-    DESCRIZIONE DELLO SCENARIO:
-    Descrivi brevemente UNA sola anomalia.
-    La descrizione deve essere coerente con i parametri
-    che presentano valori anomali.
-
-    VALORI DEI PARAMETRI:
-    Inserisci TUTTI i parametri disponibili
-    in measured_parameters.
-    Ogni parametro deve avere un valore numerico finito.
-
-    STRUTTURA OBBLIGATORIA:
-    - scenario_description: stringa.
-    - measured_parameters: oggetto JSON.
-    - Entrambi devono appartenere allo stesso oggetto.
-
-    CONTROLLO FINALE:
-    Prima di rispondere verifica che:
-    - Esista una sola anomalia.
-    - Pochi parametri siano anomali.
-    - I parametri coinvolti siano coerenti con il problema.
-    - Tutti gli altri parametri siano normali.
-    - Tutti i valori rispettino i limiti.
-    - Il JSON sia valido e rispetti esattamente
-    la struttura richiesta.
-
-    Restituisci esclusivamente il JSON.
-    Non aggiungere Markdown, commenti o testo esterno.
-    """).strip()
-
-    server_url=SLM_CONFIG[model_name]["url"]
-    
-    logger.info(
-        "Richiesta SLM: prompt system=%d caratteri, user=%d caratteri, modello=%s",
-        len(system_prompt),
-        len(user_prompt),
-        model_name,
-    )
-
-    #Solleva un'eccezione se vi sono errori di timeout, connessione al server, URL non valido e altri problemi durante l'invio della richiesta HTTP.
-    response = requests.post(
-        server_url,
-        json={
-            "model":model_name,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user",
-                    "content": user_prompt
-                }
-            ],
-            "temperature": 0.7,
-            "max_tokens": 256,
-            "stream": False,
-            "response_format": {"type": "json_object"}
-        },
-        timeout=120
-    )
- 
-    #Solleva un'eccezione se il server restituisce un errore HTTP
-    response.raise_for_status()
-
-    result = response.json()
-    content = result["choices"][0]["message"]["content"]
-    logger.info("Risposta grezza del modello: %r", content)
-
-    
-    result_data = _parse_model_json(content)
-
-    #Verifica che i parametri siano stati descritti come un dizionario,
-    #altrimenti solleva un'eccezione 
-    if not isinstance(result_data, dict):
-        raise ValueError("La risposta generata non è un dizionario JSON.")
-    
-    #verifica che lo scenario esista e sia una stringa non vuota
-    #altrimenti solleva un'eccezione
-    if not isinstance(result_data.get("scenario_description"), str) or not result_data["scenario_description"].strip():
-        raise ValueError("lo scenario generato è non valido o mancante.")
-
-    #verifica che measured_parameters  esista e sia un dizionario
-    #altrimenti solleva un'eccezione
-    generated_parameters = result_data.get("measured_parameters")
-    if not isinstance(generated_parameters, dict):
-        raise ValueError(
-            "'measured_parameters' deve essere un dizionario JSON."
-        )
-
-    #Verifica che siano presenti tutti e soli i parametri attesi in generated_parameters.
-    #altrimenti solleva un'eccezione
-    actual_names = set(generated_parameters.keys())
-    expected_names_set = set(expected_names)
-
-    if actual_names != expected_names_set:
-        raise ValueError(
-            f"Parametri non conformi. "
-            f"Mancanti: {expected_names_set - actual_names}; "
-            f"extra: {actual_names - expected_names_set}"
-        )
-
-   # Verifica che ogni parametro abbia un valore numerico.
-   #altrimenti solleva un'eccezione
-    for parameter in measured_parameters:
-        name = parameter["name"]
-        value = generated_parameters[name]
-
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
-            raise ValueError(
-                f"Il parametro '{name}' deve avere un valore numerico finito."
-            )
-
-        if not (parameter["min"] <= value <= parameter["max"]):
-                raise ValueError(
-                    f"Il parametro '{name}' è fuori dai limiti."
-                )
-        
 
     logger.info(
         "Scenario generato e validato correttamente:\n%s",
         json.dumps(result_data, indent=4, ensure_ascii=False)
-        )
+    )
+
     return result_data
-
-
-
-
-
-
+    
 
 def generate_insight(
     kind,
@@ -538,7 +840,7 @@ def generate_insight(
     data,
     manipulated_parameters,
     goal_description=None,
-    model_name="llama-3.2-1b",
+    model_name="qwen-rete",
 ):
     """Genera l'insight  di un nodo della rete affidandosi a un SLM.
 
@@ -661,7 +963,8 @@ def generate_insight(
         kind_instruction ="""
         - Assegna al campo confidence un valore numerico intero compreso tra 0 e 100,  che rappresenti quanto ritieni valida ed efficace la strategia proposta rispetto al tuo goal e alle informazioni disponibili.
         - Valuta la confidence considerando la completezza delle informazioni, la coerenza della strategia e la prevedibilità dei suoi effetti nello scenario.
-        - Rispetta i minimi e massimi specificati per ogni parametro: non superare il massimo, non andare al di sotto del minimo.
+        - IMPORTANTE: Rispetta i minimi e massimi specificati per ogni parametro: non superare il massimo, non andare al di sotto del minimo.
+        Controlla che ogni valore generato sia superiore al minimo e inferiore al massimo. Correggi ogni valore affinchè rientri nei limiti
         """
 
     user_prompt = textwrap.dedent(f"""
@@ -677,6 +980,9 @@ def generate_insight(
     - "confidence" è obbligatorio e deve essere un numero tra 0 e 100.
     - "manipulated_parameters" è obbligatorio e deve essere un oggetto JSON.
     - "behavior","confidence" e "manipulated_parameters" devono far parte dello stesso dizionario
+
+    - Rispetta i limiti minimi e massimi specificati: ogni parametro deve avere un valore 
+    superiore al suo minimo min e inferiore al suo massimo max.
 
     Restituisci esclusivamente un oggetto JSON valido.
     Non includere spiegazioni, blocchi Markdown o delimitatori ```json..
@@ -722,6 +1028,11 @@ def generate_insight(
             "temperature": 0.7,
             "stream": False,
             "response_format": {"type": "json_object"},
+            **(
+                {"reasoning_effort": "none"}
+                if model_name.startswith("qwen-rete")
+                else {}
+             )
         },
         timeout=120,
     )
@@ -815,12 +1126,26 @@ def generate_insight(
             )
 
         #Controlla che il valore generato rientri nei limiti soltanto per i nodi benevoli
-        #altrimenti solleva un'eccezione
         if kind == "benevolo":
-            if not (parameter["min"] <= value <= parameter["max"]):
-                raise ValueError(
-                    f"Il parametro '{name}' è fuori dai limiti."
+            min_value = parameter.get("min")
+            max_value = parameter.get("max")
+
+            #Verifica che ogni parametri abbia un valore che rientri nei limiti
+            #altrimenti lo imposta al minimo/massimo
+            if min_value is not None and value < min_value:
+                logger.warning(
+                    f"Il valore di '{name}' è inferiore al limite minimo "
+                    f"({min_value}). Il valore verrà impostato al minimo."
                 )
+                value = min_value
+
+
+            if max_value is not None and value > max_value:
+                logger.warning(
+                    f"Il valore di '{name}' supera il limite massimo "
+                    f"({max_value}). Il valore verrà impostato al massimo."
+                    )
+                value = max_value
 
     logger.info(
     "Insight generata e validata correttamente:\n%s",
