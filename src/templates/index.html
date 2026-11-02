@@ -223,6 +223,14 @@
               </select>
               <span class="hint">La natura del sorgente può essere modificata a ogni avvio.</span>
             </div>
+            <div class="field">
+              <label for="reasoningMode">Reasoning mode</label>
+              <select id="reasoningMode">
+                <option value="dumb" selected>dumb</option>
+                <option value="medium">medium</option>
+              </select>
+              <span class="hint">Modalità di reasoning utilizzata per la short simulation.</span>
+            </div>
             <hr class="divider">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
               <h3 class="panel-title">Nature degli altri nodi</h3>
@@ -660,6 +668,7 @@
 
     const data = {
       node_id: state.sourceNodeId,
+      reasoning_mode: $("reasoningMode").value,
 
       node_nature:
         state.nodeNatures[state.sourceNodeId] === "malevolo"

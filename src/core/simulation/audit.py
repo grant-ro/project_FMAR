@@ -1,4 +1,4 @@
-from core.simulation.slm_handler import SLM_CONFIG, generate_insight
+from core.simulation.slm_handler import generate_insight
 
 _nodes_nature= None
 """Dizionario annidato che associa a ogni nodo della topologia, identificato
@@ -80,7 +80,7 @@ def get_node_true_nature( node_id):
     """
     return _nodes_nature[node_id]["true"]
 
-def audit_reasoning(network_description,scenario, goal_description,manipulated_parameters, model_name="qwen-rete"):
+def audit_reasoning(network_description,scenario, goal_description,manipulated_parameters, model_name):
     """Genera l'insight  di un nodo della rete affidandosi a un SLM.
 
     Args:

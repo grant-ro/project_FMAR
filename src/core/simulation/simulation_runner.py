@@ -2,7 +2,7 @@
 import threading
 import requests
 import random
-from core.simulation.slm_handler import SLM_CONFIG, generate_network_scenario, generate_insight, evaluate_insight
+from core.simulation.slm_handler import get_SLM_name, generate_network_scenario, generate_insight, evaluate_insight
 from core.simulation.local_knowledge_handler import init_local_knowledge, vectorize, search, add_knowledge
 from core.simulation.audit import init_audit, get_node_known_nature, get_node_true_nature, audit_reasoning, audit_trust_evaluation
 from collections import deque
@@ -21,6 +21,56 @@ _adjacency = None
 
 _audit_state=False
 """Bool che rappresenta lo stato dell'audit e della sua conoscenza: True: configurato, False: non configurato"""
+
+_reasoning_mode= None
+"""Stringa che rappresenta il livello di intelligenza da usare nella simulazione, e quindi i server da utilizzare"""
+
+_scenario_generation_server= None
+"""Nome del server da usare per la generazione dello scenario"""
+
+_insight_generation_server = None
+"""Nome del server da usare per la generazione dell'insight"""
+
+_insight_evaluation_server= None
+"""Nome del server da usare per la valutazione dell'insight"""
+
+_audit_server= None
+"""Nome del server che usa l'audit"""
+
+def _init_reasoning_mode(mode):
+    """
+    Inizializza la tipologia di reasoning da usare nella simulazione
+
+    Args:
+        reasoning_mode= Stringa che indica la tipologia di reasoning mode da usare nella simulazione e qiuindi a quali server affidarsi
+
+    Returns:
+        None
+    
+    """
+    global _scenario_generation_server
+    global _insight_generation_server
+    global _insight_evaluation_server
+    global _audit_server 
+
+    match mode:
+        case "dumb":
+            _scenario_generation_server = get_SLM_name("llama-3.2-1b")
+            _insight_generation_server = get_SLM_name("llama-3.2-1b")
+            _insight_evaluation_server =  get_SLM_name("llama-3.2-1b")
+            _audit_server= get_SLM_name("llama-3.2-1b")
+
+        case "medium":
+            _scenario_generation_server = get_SLM_name("qwen-rete")
+            _insight_generation_server = get_SLM_name("qwen-rete")
+            _insight_evaluation_server = get_SLM_name("qwen-rete")
+            _audit_server= get_SLM_name("qwen-rete")
+
+        case _:
+            raise ValueError(f"Reasoning mode non valido: {mode}")
+
+
+
 
 def _build_adjacency(topology):
     """Costruisce la lista di adiacenza a partire dalla topologia della rete.
@@ -64,13 +114,14 @@ def _build_adjacency(topology):
     }
 
 
-def _setup_simulation(configuration, nodes_true_nature):
+def _setup_simulation(configuration, nodes_true_nature, reasoning_mode):
     """Inizializza la conoscenza locale, la struttura di adiacenza della rete, 
-        la conoscenza relativa alla natura dei nodi dell'audit. 
+        la conoscenza relativa alla natura dei nodi dell'audit, la reasoning mode. 
     
     Args:
         configuration: Dizionario contenente la configurazione della simulazione, inclusa la topologia della rete.
         nodes_true_nature= Dizionario che associa per ogni nodo al suo node_id la stringa che rappresenta la sua reale natura (benevolo o malevolo)
+        reasoning_mode= Stringa che indica la tipologia di reasoning mode da usare nella simulazione e qiuindi a quali server affidarsi
 
     Returns:
         None.
@@ -87,6 +138,7 @@ def _setup_simulation(configuration, nodes_true_nature):
     )
 
     init_audit(audit_parameters=configuration["analysis_parameters"]["audit_parameters"], nodes_true_nature= nodes_true_nature)
+    _init_reasoning_mode(reasoning_mode)
     _audit_state=True
 
     logger.info("Simulazione inizializzata.")
@@ -110,6 +162,7 @@ def reset_simulation():
     _local_knowledge = None
     _adjacency = None
     _audit_state= False
+    _reasoning_mode= None
 
     logger.info("Stato interno della simulazione resettato.")
 
@@ -203,7 +256,8 @@ def _benevolent_node_reasoning(local_knowledge,network_description, scenario, go
             network_description=network_description, 
             data=scenario,
             manipulated_parameters=simulation_parameters["manipulated_parameters"],
-            goal_description=goal_description
+            goal_description=goal_description,
+            model_name=_insight_generation_server
         )
 
     return {
@@ -238,7 +292,8 @@ def _malicious_node_reasoning(network_description, scenario, manipulated_paramet
         network_description=network_description, 
         data=scenario,
         manipulated_parameters=manipulated_parameters,
-        goal_description=None
+        goal_description=None,
+        model_name=_insight_generation_server
     )
 
     return {
@@ -455,7 +510,7 @@ def _insight_evaluation(node_id, data):
         manipulated_parameters=simulation_parameters["manipulated_parameters"],
         goal_description=goal_desc,
         insight=insight,
-        model_name="llama-3.2-1b",
+        model_name=_insight_evaluation_server,
     )
 
     logger.info(
@@ -615,8 +670,8 @@ def run_short_simulation(configuration, data):
     """
     global _local_knowledge, _adjacency, _audit_state
 
-    if _local_knowledge is None or _adjacency is None or _audit_state == False:
-        _setup_simulation(configuration, data["nodes_true_nature"])
+    if _local_knowledge is None or _adjacency is None or _audit_state == False or _reasoning_mode is None:
+        _setup_simulation(configuration, data["nodes_true_nature"], data["reasoning_mode"])
     
     logger.info(
         "Avvio simulazione breve: nodo=%s, natura=%s.",
@@ -626,7 +681,8 @@ def run_short_simulation(configuration, data):
     #Genera uno scenario critico in cui deve operare il nodo selezionato
     scenario= generate_network_scenario(
         configuration["simulation_parameters"]["measured_parameters"],
-        configuration["topology"]["network_description"]
+        configuration["topology"]["network_description"],
+        model_name=_scenario_generation_server
     )
     logger.info("Scenario di rete generato correttamente.")
 
@@ -656,14 +712,13 @@ def run_short_simulation(configuration, data):
             goal_desc = goal["description"]
             break
 
+    #Estrae la conoscenza locale associata al nodo e al goal selezionati
+    for node in _local_knowledge:
+        if node["nodo_id"] == data["node_id"]:
+            goal_specific_knowledge=node[selected_goal]
+            break
+
     if data["node_nature"] == "benevolo":        
-
-
-        #Estrae la conoscenza locale associata al nodo e al goal selezionati
-        for node in _local_knowledge:
-            if node["nodo_id"] == data["node_id"]:
-                goal_specific_knowledge=node[selected_goal]
-                break
 
         #Produce un'insight benevola 
         insight=_benevolent_node_reasoning(
@@ -733,7 +788,7 @@ def run_short_simulation(configuration, data):
                     scenario= scenario,
                     goal_description=goal_desc,
                     manipulated_parameters=configuration["simulation_parameters"]["manipulated_parameters"],
-                    model_name=SLM_CONFIG["llama-3.1-8b"]["model_name"]
+                    model_name=get_SLM_name("llama-3.1-8b")
                 )
 
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
@@ -746,7 +801,8 @@ def run_short_simulation(configuration, data):
                     network_description=configuration["topology"]["network_description"],
                     scenario= scenario,
                     goal_description=goal_desc,
-                    manipulated_parameters=configuration["simulation_parameters"]["manipulated_parameters"]
+                    manipulated_parameters=configuration["simulation_parameters"]["manipulated_parameters"],
+                    model_name=_audit_server
                 )
 
         else: 

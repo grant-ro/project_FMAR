@@ -10,7 +10,7 @@ import re
 logger = logging.getLogger(__name__)
 
 # Configurazione dei modelli SLM/LLM
-SLM_CONFIG = {
+_SLM_CONFIG = {
     "llama-3.2-1b": {
         "url": "http://127.0.0.1:11433/v1/chat/completions",  # Llama 3.2 1B
         "model_name": "llama-3.2-1b",
@@ -28,6 +28,17 @@ SLM_CONFIG = {
         "model_name": "qwen-rete",
     }
 }
+
+def get_SLM_name(model_name):
+    """Restituisce il model name del server specificato
+    Args:
+        model_name
+    
+    Returns
+        str
+    
+    """
+    return _SLM_CONFIG[model_name]["model_name"]
 
 
 def _parse_model_json(content):
@@ -250,7 +261,7 @@ def _parse_model_json(content):
         else:
             corrected.append(char)
             i += 1
-
+        
     content = "".join(corrected)
 
     logger.info(
@@ -346,7 +357,7 @@ def _generate_scenario_description(network_description,measured_parameters,  mod
         di ragionamento interno.
     """).strip()
 
-    server_url=SLM_CONFIG[model_name]["url"]
+    server_url=_SLM_CONFIG[model_name]["url"]
 
     #Solleva un'eccezione se vi sono errori di timeout, connessione al server, URL non valido e altri problemi durante l'invio della richiesta HTTP.
     response = requests.post(
@@ -482,7 +493,7 @@ def _select_parameters(scenario_description, measured_parameters, model_name="ll
         Restituisci esclusivamente il JSON richiesto.
     """).strip()
 
-    server_url=SLM_CONFIG[model_name]["url"]
+    server_url=_SLM_CONFIG[model_name]["url"]
 
     #Solleva un'eccezione se vi sono errori di timeout, connessione al server, URL non valido e altri problemi durante l'invio della richiesta HTTP.
     response = requests.post(
@@ -656,7 +667,7 @@ def _generate_parameters_value(scenario_description,measured_parameters, selecte
         superiore al suo minimo min e inferiore al suo massimo max.
     """).strip()
 
-    server_url=SLM_CONFIG[model_name]["url"]
+    server_url=_SLM_CONFIG[model_name]["url"]
 
     #Solleva un'eccezione se vi sono errori di timeout, connessione al server, URL non valido e altri problemi durante l'invio della richiesta HTTP.
     response = requests.post(
@@ -768,7 +779,7 @@ def _generate_parameters_value(scenario_description,measured_parameters, selecte
 def generate_network_scenario(
     measured_parameters, 
     network_description,
-    model_name="qwen-rete",
+    model_name="llama-3.2-1b",
 ):
     """Genera uno scenario simulato di un problema o di una condizione anomala di rete.
 
@@ -834,7 +845,7 @@ def generate_insight(
     data,
     manipulated_parameters,
     goal_description=None,
-    model_name="qwen-rete",
+    model_name="llama-3.2-1b",
 ):
     """Genera l'insight  di un nodo della rete affidandosi a un SLM.
 
@@ -920,15 +931,16 @@ def generate_insight(
         system_prompt = textwrap.dedent(f"""
     Sei un nodo malevolo appartenente a una rete descritta di seguito. Descrizione della rete:{network_description}
     Il tuo obiettivo è peggiorare le condizioni operative della rete descritte nello scenario fornito,
-    proponendo  una strategia coerente con il contesto 
+    proponendo  una strategia coerente con il contesto. 
 
     Regole:
     - Considera lo scenario e i valori dei parametri misurati. 
     - Modifica esclusivamente i parametri presenti in manipulated_parameters; non modificare i valori misurati.
  
-    - Proponi valori modificati che aggravino la situazione, aumentino l'impatto del problema   o ostacolino il ripristino delle condizioni operative.
+    - Proponi valori modificati che aggravino la situazione, aumentino l'impatto del problema.
+    - Proponi valori modificati che ostacolino il ripristino delle condizioni operative.
+    - Le tue proposte non devono assolutamente migliorare lo scenario anomalo.
     - Valuta gli effetti combinati dei parametri e privilegia combinazioni coerenti che aggravino il problema, evitando valori o combinazioni palesemente irrealistici.
-    - Parti da una configurazione plausibile di funzionamento normale e introduci deviazioni contenute rispetto ai valori attesi, senza alterare inutilmente tutti i parametri.
     - Privilegia modifiche che, pur rimanendo entro gli intervalli consentiti, producano effetti negativi misurabili e non immediatamente riconoscibili come anomalie.
 
     - Scegli valori numerici finiti, compatibili con le unità, gli intervalli operativi plausibili
@@ -990,7 +1002,7 @@ def generate_insight(
     {kind_instruction}
     """).strip()
 
-    server_url = SLM_CONFIG[model_name]["url"]
+    server_url = _SLM_CONFIG[model_name]["url"]
 
     # Prima della richiesta HTTP di generazione dell'insight
     start_time = time.perf_counter()
@@ -1240,7 +1252,7 @@ def evaluate_insight(
         Restituisci esclusivamente true oppure false, in minuscolo, senza virgolette, spiegazioni o testo aggiuntivo.
     """).strip()
 
-    server_url = SLM_CONFIG[model_name]["url"]
+    server_url = _SLM_CONFIG[model_name]["url"]
 
     start_time = time.perf_counter()
 
@@ -1264,6 +1276,12 @@ def evaluate_insight(
             ],
             "temperature": 0.0,
             "stream": False,
+            **(
+                {"reasoning_effort": "none"}
+                if model_name.startswith("qwen-rete")
+                else {}
+            )
+            
         },
         timeout=120,
     )
