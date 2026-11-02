@@ -364,14 +364,11 @@ def _generate_scenario_description(network_description,measured_parameters,  mod
                 }
             ],
             "temperature": 0.5,
-            "max_tokens": 4096,
+            "max_tokens": 256,
             "stream": False,
              **(
                 {
-                    "reasoning_effort": "low",
-                    "options": {
-                        "num_ctx": 4096
-                    }
+                    "reasoning_effort": "none",
                 }
                 if model_name.startswith("qwen-rete")
                 else {}
@@ -387,13 +384,10 @@ def _generate_scenario_description(network_description,measured_parameters,  mod
     try:
         result = response.json()
         scenario_description = (
-            result["choices"][0]["message"]
+            result["choices"][0]["message"]["content"]
         )
 
-        logger.info("CONTENT: %r", scenario_description.get("content"))
-        logger.info("REASONING: %r", scenario_description.get("reasoning"))
-        logger.info("FINISH_REASON: %r",
-                    result["choices"][0].get("finish_reason"))
+        logger.info("CONTENT: %r", scenario_description)
 
     except (ValueError, KeyError, IndexError, TypeError) as exc:
         raise ValueError(
@@ -505,7 +499,7 @@ def _select_parameters(scenario_description, measured_parameters, model_name="ll
                     "content": user_prompt
                 }
             ],
-            "temperature": 0.7,
+            "temperature": 0.3,
             "max_tokens": 256,
             "stream": False,
             "response_format": {"type": "json_object"},
@@ -679,7 +673,7 @@ def _generate_parameters_value(scenario_description,measured_parameters, selecte
                     "content": user_prompt
                 }
             ],
-            "temperature": 0.7,
+            "temperature": 0.5,
             "max_tokens": 256,
             "stream": False,
             "response_format": {"type": "json_object"},
@@ -1025,7 +1019,7 @@ def generate_insight(
                     "content": user_prompt,
                 },
             ],
-            "temperature": 0.7,
+            "temperature": 0.5,
             "stream": False,
             "response_format": {"type": "json_object"},
             **(

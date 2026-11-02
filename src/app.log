@@ -1924,3 +1924,395 @@ requests.exceptions.ReadTimeout: HTTPConnectionPool(host='127.0.0.1', port=11434
 2026-11-02 09:21:05,042.042 - INFO - core.simulation.simulation_runner - Avvio simulazione breve: nodo=N01, natura=benevolo.
 2026-11-02 09:21:05,043.043 - INFO - core.simulation.slm_handler - Avvio generazione dello scenario di rete e valorizzazione dei parametri misurabili con modello 'qwen-rete'.
 2026-11-02 09:21:05,043.043 - INFO - core.simulation.slm_handler - Avvio generazione dello scenario di rete con modello 'qwen-rete'.
+2026-11-02 09:23:05,146.146 - ERROR - core.operation_coordinator - Errore nell'esecuzione della simulazione short.
+Traceback (most recent call last):
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connectionpool.py", line 540, in _make_request
+    response = conn.getresponse()
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connection.py", line 638, in getresponse
+    httplib_response = super().getresponse()
+  File "/usr/lib/python3.14/http/client.py", line 1459, in getresponse
+    response.begin()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/http/client.py", line 336, in begin
+    version, status, reason = self._read_status()
+                              ~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/http/client.py", line 297, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/socket.py", line 725, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+TimeoutError: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/adapters.py", line 696, in send
+    resp = conn.urlopen(
+        method=request.method,
+    ...<9 lines>...
+        chunked=chunked,
+    )
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connectionpool.py", line 847, in urlopen
+    retries = retries.increment(
+        method, url, error=new_e, _pool=self, _stacktrace=sys.exc_info()[2]
+    )
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/util/retry.py", line 510, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connectionpool.py", line 793, in urlopen
+    response = self._make_request(
+        conn,
+    ...<10 lines>...
+        **response_kw,
+    )
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connectionpool.py", line 542, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connectionpool.py", line 373, in _raise_timeout
+    raise ReadTimeoutError(
+        self, url, f"Read timed out. (read timeout={timeout_value})"
+    ) from err
+urllib3.exceptions.ReadTimeoutError: HTTPConnectionPool(host='127.0.0.1', port=11434): Read timed out. (read timeout=120)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/project/src/core/operation_coordinator.py", line 229, in worker
+    result = simulation_function(configuration, function_argument)
+  File "/workspace/project/src/core/simulation/simulation_runner.py", line 627, in run_short_simulation
+    scenario= generate_network_scenario(
+        configuration["simulation_parameters"]["measured_parameters"],
+        configuration["topology"]["network_description"]
+    )
+  File "/workspace/project/src/core/simulation/slm_handler.py", line 803, in generate_network_scenario
+    scenario_description = _generate_scenario_description(
+        network_description=network_description,
+        measured_parameters=measured_parameters,
+        model_name=model_name
+    )
+  File "/workspace/project/src/core/simulation/slm_handler.py", line 352, in _generate_scenario_description
+    response = requests.post(
+        server_url,
+    ...<26 lines>...
+        timeout=120
+    )
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/api.py", line 134, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/api.py", line 71, in request
+    return session.request(method=method, url=url, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/sessions.py", line 651, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/sessions.py", line 784, in send
+    r = adapter.send(request, **kwargs)
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/adapters.py", line 742, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: HTTPConnectionPool(host='127.0.0.1', port=11434): Read timed out. (read timeout=120)
+2026-11-02 09:24:27,277.277 - INFO - core.config_loader - file'/workspace/project/data/input/config/topology.json letto correttamente.
+2026-11-02 09:24:27,277.277 - INFO - core.config_loader - file'/workspace/project/data/input/config/simulation_parameters.json letto correttamente.
+2026-11-02 09:24:27,278.278 - INFO - core.config_loader - file'/workspace/project/data/input/config/analysis_parameters.json letto correttamente.
+2026-11-02 09:24:27,278.278 - INFO - core.config_loader - topologia validata
+2026-11-02 09:24:27,278.278 - INFO - core.config_loader - parametri di simulazione validati
+2026-11-02 09:24:27,278.278 - INFO - core.config_loader - parametri di analisi validati
+2026-11-02 09:24:27,278.278 - INFO - core.config_loader - configurazione caricata correttamente.
+2026-11-02 09:24:27,280.280 - INFO - __main__ - Avvio del server su 127.0.0.1:5000.
+2026-11-02 09:24:27,284.284 - INFO - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-11-02 09:24:27,284.284 - INFO - werkzeug - [33mPress CTRL+C to quit[0m
+2026-11-02 09:24:29,845.845 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:24:29] "GET /socket.io/?EIO=4&transport=polling&t=Q6RN2M8 HTTP/1.1" 200 -
+2026-11-02 09:24:29,865.865 - INFO - __main__ - Client Socket.IO connesso.
+2026-11-02 09:24:29,867.867 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:24:29] "POST /socket.io/?EIO=4&transport=polling&t=Q6RN2MR&sid=shQOjoYkZBj9JNj0AAAA HTTP/1.1" 200 -
+2026-11-02 09:24:29,886.886 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:24:29] "GET /socket.io/?EIO=4&transport=polling&t=Q6RN2MS&sid=shQOjoYkZBj9JNj0AAAA HTTP/1.1" 200 -
+2026-11-02 09:24:31,042.042 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:24:31] "GET / HTTP/1.1" 200 -
+2026-11-02 09:24:31,321.321 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:24:31] "GET /socket.io/?EIO=4&transport=polling&t=Q6RN2hv HTTP/1.1" 200 -
+2026-11-02 09:24:31,403.403 - INFO - __main__ - Client Socket.IO connesso.
+2026-11-02 09:24:31,404.404 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:24:31] "POST /socket.io/?EIO=4&transport=polling&t=Q6RN2kU&sid=YGub17nwqb_wSvJgAAAC HTTP/1.1" 200 -
+2026-11-02 09:24:31,411.411 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:24:31] "GET /socket.io/?EIO=4&transport=polling&t=Q6RN2kV&sid=YGub17nwqb_wSvJgAAAC HTTP/1.1" 200 -
+2026-11-02 09:24:34,719.719 - INFO - __main__ - Richiesta di avvio di una simulazione breve ricevuta.
+2026-11-02 09:24:34,720.720 - INFO - core.operation_coordinator - Simulazione short avviata.
+2026-11-02 09:24:34,720.720 - INFO - core.simulation.local_knowledge_handler - Inizializzazione conoscenza locale per 6 nodi
+2026-11-02 09:24:34,721.721 - INFO - core.simulation.simulation_runner - Simulazione inizializzata.
+2026-11-02 09:24:34,721.721 - INFO - core.simulation.simulation_runner - Avvio simulazione breve: nodo=N01, natura=benevolo.
+2026-11-02 09:24:34,721.721 - INFO - core.simulation.slm_handler - Avvio generazione dello scenario di rete e valorizzazione dei parametri misurabili con modello 'qwen-rete'.
+2026-11-02 09:24:34,721.721 - INFO - core.simulation.slm_handler - Avvio generazione dello scenario di rete con modello 'qwen-rete'.
+2026-11-02 09:24:54,547.547 - INFO - core.simulation.slm_handler - CONTENT: "Un semaforo a un incrocio urbano entra in uno stato anomalo per cui i veicoli sono costretti ad attendere tempi medi eccessivamente lunghi nonostante l'occupanza della zona di rilevamento sia bassa. Questo fenomeno è causato da un malfunzionamento del sensore che non rileva correttamente il flusso vehicolare in ingresso, determinando una sottovalutazione dei veicoli presenti e impedendo all'algoritmo di ottimizzare la fase semaforica per sbloccare l'incrocio."
+2026-11-02 09:24:54,547.547 - INFO - core.simulation.slm_handler - REASONING: None
+2026-11-02 09:24:54,547.547 - INFO - core.simulation.slm_handler - FINISH_REASON: 'stop'
+2026-11-02 09:24:54,547.547 - ERROR - core.operation_coordinator - Errore nell'esecuzione della simulazione short.
+Traceback (most recent call last):
+  File "/workspace/project/src/core/operation_coordinator.py", line 229, in worker
+    result = simulation_function(configuration, function_argument)
+  File "/workspace/project/src/core/simulation/simulation_runner.py", line 627, in run_short_simulation
+    scenario= generate_network_scenario(
+        configuration["simulation_parameters"]["measured_parameters"],
+        configuration["topology"]["network_description"]
+    )
+  File "/workspace/project/src/core/simulation/slm_handler.py", line 800, in generate_network_scenario
+    scenario_description = _generate_scenario_description(
+        network_description=network_description,
+        measured_parameters=measured_parameters,
+        model_name=model_name
+    )
+  File "/workspace/project/src/core/simulation/slm_handler.py", line 403, in _generate_scenario_description
+    raise ValueError("La descrizione generata non è una stringa.")
+ValueError: La descrizione generata non è una stringa.
+2026-11-02 09:28:55,789.789 - INFO - core.config_loader - file'/workspace/project/data/input/config/topology.json letto correttamente.
+2026-11-02 09:28:55,791.791 - INFO - core.config_loader - file'/workspace/project/data/input/config/simulation_parameters.json letto correttamente.
+2026-11-02 09:28:55,792.792 - INFO - core.config_loader - file'/workspace/project/data/input/config/analysis_parameters.json letto correttamente.
+2026-11-02 09:28:55,792.792 - INFO - core.config_loader - topologia validata
+2026-11-02 09:28:55,792.792 - INFO - core.config_loader - parametri di simulazione validati
+2026-11-02 09:28:55,792.792 - INFO - core.config_loader - parametri di analisi validati
+2026-11-02 09:28:55,792.792 - INFO - core.config_loader - configurazione caricata correttamente.
+2026-11-02 09:28:55,795.795 - INFO - __main__ - Avvio del server su 127.0.0.1:5000.
+2026-11-02 09:28:55,802.802 - INFO - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-11-02 09:28:55,802.802 - INFO - werkzeug - [33mPress CTRL+C to quit[0m
+2026-11-02 09:28:57,215.215 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:28:57] "GET /socket.io/?EIO=4&transport=polling&t=Q6RO3dp HTTP/1.1" 200 -
+2026-11-02 09:28:57,234.234 - INFO - __main__ - Client Socket.IO connesso.
+2026-11-02 09:28:57,236.236 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:28:57] "POST /socket.io/?EIO=4&transport=polling&t=Q6RO3e4&sid=vgDR5slVc33LyaflAAAA HTTP/1.1" 200 -
+2026-11-02 09:28:57,241.241 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:28:57] "GET /socket.io/?EIO=4&transport=polling&t=Q6RO3e7&sid=vgDR5slVc33LyaflAAAA HTTP/1.1" 200 -
+2026-11-02 09:28:59,669.669 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:28:59] "GET / HTTP/1.1" 200 -
+2026-11-02 09:28:59,955.955 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:28:59] "GET /socket.io/?EIO=4&transport=polling&t=Q6RO4He HTTP/1.1" 200 -
+2026-11-02 09:29:00,052.052 - INFO - __main__ - Client Socket.IO connesso.
+2026-11-02 09:29:00,052.052 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:29:00] "POST /socket.io/?EIO=4&transport=polling&t=Q6RO4K7&sid=2rJEgjKqkvRL0_C8AAAC HTTP/1.1" 200 -
+2026-11-02 09:29:00,057.057 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:29:00] "GET /socket.io/?EIO=4&transport=polling&t=Q6RO4K8&sid=2rJEgjKqkvRL0_C8AAAC HTTP/1.1" 200 -
+2026-11-02 09:29:20,934.934 - INFO - __main__ - Richiesta di avvio di una simulazione breve ricevuta.
+2026-11-02 09:29:20,934.934 - INFO - core.operation_coordinator - Simulazione short avviata.
+2026-11-02 09:29:20,935.935 - INFO - core.simulation.local_knowledge_handler - Inizializzazione conoscenza locale per 6 nodi
+2026-11-02 09:29:20,935.935 - INFO - core.simulation.simulation_runner - Simulazione inizializzata.
+2026-11-02 09:29:20,935.935 - INFO - core.simulation.simulation_runner - Avvio simulazione breve: nodo=N01, natura=benevolo.
+2026-11-02 09:29:20,935.935 - INFO - core.simulation.slm_handler - Avvio generazione dello scenario di rete e valorizzazione dei parametri misurabili con modello 'qwen-rete'.
+2026-11-02 09:29:20,936.936 - INFO - core.simulation.slm_handler - Avvio generazione dello scenario di rete con modello 'qwen-rete'.
+2026-11-02 09:29:34,556.556 - INFO - core.simulation.slm_handler - CONTENT: "Un semaforo in un incrocio urbano sta mantenendo una fase verde troppo breve per i veicoli che arrivano con un'occupazione della zona di rilevamento elevata e una velocità media ridotta. Questa situazione provoca un aumento significativo del tempo medio di attesa, impedendo il completo svuotamento delle code in ingresso e creando congestione locale a valle del nodo."
+2026-11-02 09:29:34,556.556 - INFO - core.simulation.slm_handler - Scenario prodotto dal modello:
+Un semaforo in un incrocio urbano sta mantenendo una fase verde troppo breve per i veicoli che arrivano con un'occupazione della zona di rilevamento elevata e una velocità media ridotta. Questa situazione provoca un aumento significativo del tempo medio di attesa, impedendo il completo svuotamento delle code in ingresso e creando congestione locale a valle del nodo.
+2026-11-02 09:29:34,557.557 - INFO - core.simulation.slm_handler - Avvio selezione parametri affetti dallo scenario di anomalia di rete con modello 'qwen-rete'.
+2026-11-02 09:29:48,698.698 - INFO - core.simulation.slm_handler - Parametri selezionati dal modello:
+['mean_waiting_time', 'queue_length']
+2026-11-02 09:29:48,698.698 - INFO - core.simulation.slm_handler - Avvio generazione dei valori dei parametri misurabili con modello 'qwen-rete'.
+2026-11-02 09:30:26,630.630 - INFO - core.simulation.slm_handler - Valori dei parametri prodotti dal modello (risposta grezza):
+{
+    "queue_length": 45,
+    "vehicle_flow": 25,
+    "mean_speed": 30,
+    "mean_waiting_time": 180,
+    "occupancy_ratio": 65,
+    "downstream_occupancy": 15,
+    "pedestrian_waiting_count": 40
+}
+2026-11-02 09:30:26,630.630 - INFO - core.simulation.slm_handler - DEBUG - JSON dopo rimozione commenti e virgole: '180,\n    "occupancy_ratio": 65,\n    "downstream_occupancy": 15,\n    "pedestrian_waiting_count": 40\n}'
+2026-11-02 09:30:26,630.630 - INFO - core.simulation.slm_handler - DEBUG - JSON dopo correzione virgolette: '180,\n    "occupancy_ratio": 65,\n    "downstream_occupancy": 15,\n    "pedestrian_waiting_count": 40\n}'
+2026-11-02 09:30:26,631.631 - INFO - core.simulation.slm_handler - JSON dopo la pulizia. Contenuto:
+{
+    "queue_length": 45,
+    "vehicle_flow": 25,
+    "mean_speed": 30,
+    "mean_waiting_time": 180,
+    "occupancy_ratio": 65,
+    "downstream_occupancy": 15,
+    "pedestrian_waiting_count": 40
+}
+2026-11-02 09:30:26,631.631 - INFO - core.simulation.slm_handler - Valori dei parametri prodotti dal modello (risposta verificata):
+{'queue_length': 45, 'vehicle_flow': 25, 'mean_speed': 30, 'mean_waiting_time': 180, 'occupancy_ratio': 65, 'downstream_occupancy': 15, 'pedestrian_waiting_count': 40}
+2026-11-02 09:30:26,631.631 - INFO - core.simulation.slm_handler - Scenario generato e validato correttamente:
+{
+    "scenario_description": "Un semaforo in un incrocio urbano sta mantenendo una fase verde troppo breve per i veicoli che arrivano con un'occupazione della zona di rilevamento elevata e una velocità media ridotta. Questa situazione provoca un aumento significativo del tempo medio di attesa, impedendo il completo svuotamento delle code in ingresso e creando congestione locale a valle del nodo.",
+    "measured_parameters": {
+        "queue_length": 45,
+        "vehicle_flow": 25,
+        "mean_speed": 30,
+        "mean_waiting_time": 180,
+        "occupancy_ratio": 65,
+        "downstream_occupancy": 15,
+        "pedestrian_waiting_count": 40
+    }
+}
+2026-11-02 09:30:26,631.631 - INFO - core.simulation.simulation_runner - Scenario di rete generato correttamente.
+2026-11-02 09:30:26,631.631 - INFO - core.simulation.simulation_runner - Nodo N01: selezionato goal goal_congestion.
+2026-11-02 09:30:26,631.631 - INFO - core.simulation.simulation_runner - Nodo N01: Avvio produzione insight.
+2026-11-02 09:30:26,631.631 - INFO - core.simulation.simulation_runner - Nodo sorgente: valutazione basata sulla conoscenza locale.
+2026-11-02 09:30:26,631.631 - INFO - core.simulation.local_knowledge_handler - Avvio ricerca nella conoscenza locale. candidati: 0
+2026-11-02 09:30:26,631.631 - WARNING - core.simulation.local_knowledge_handler - Spazio di ricerca vuoto. Durata ricerca: 0.000045 secondi
+2026-11-02 09:30:26,631.631 - INFO - core.simulation.simulation_runner - Nessun caso simile trovato: generazione insight tramite SLM.
+2026-11-02 09:30:26,631.631 - INFO - core.simulation.slm_handler - Avvio generazione dell'insight con modello 'qwen-rete'.
+2026-11-02 09:30:26,632.632 - INFO - core.simulation.slm_handler - Invio della richiesta al modello SLM
+2026-11-02 09:30:26,632.632 - INFO - core.simulation.slm_handler - Richiesta SLM: prompt system=1323 caratteri, user=3899 caratteri, modello=qwen-rete
+2026-11-02 09:34:04,029.029 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:34:04] "GET /socket.io/?EIO=4&transport=polling&t=Q6ROwUo HTTP/1.1" 200 -
+2026-11-02 09:34:04,010.010 - ERROR - core.operation_coordinator - Errore nell'esecuzione della simulazione short.
+Traceback (most recent call last):
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connectionpool.py", line 540, in _make_request
+    response = conn.getresponse()
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connection.py", line 638, in getresponse
+    httplib_response = super().getresponse()
+  File "/usr/lib/python3.14/http/client.py", line 1459, in getresponse
+    response.begin()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/http/client.py", line 336, in begin
+    version, status, reason = self._read_status()
+                              ~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/http/client.py", line 297, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/socket.py", line 725, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+TimeoutError: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/adapters.py", line 696, in send
+    resp = conn.urlopen(
+        method=request.method,
+    ...<9 lines>...
+        chunked=chunked,
+    )
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connectionpool.py", line 847, in urlopen
+    retries = retries.increment(
+        method, url, error=new_e, _pool=self, _stacktrace=sys.exc_info()[2]
+    )
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/util/retry.py", line 510, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connectionpool.py", line 793, in urlopen
+    response = self._make_request(
+        conn,
+    ...<10 lines>...
+        **response_kw,
+    )
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connectionpool.py", line 542, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/project/.env/lib/python3.14/site-packages/urllib3/connectionpool.py", line 373, in _raise_timeout
+    raise ReadTimeoutError(
+        self, url, f"Read timed out. (read timeout={timeout_value})"
+    ) from err
+urllib3.exceptions.ReadTimeoutError: HTTPConnectionPool(host='127.0.0.1', port=11434): Read timed out. (read timeout=120)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/project/src/core/operation_coordinator.py", line 229, in worker
+    result = simulation_function(configuration, function_argument)
+  File "/workspace/project/src/core/simulation/simulation_runner.py", line 669, in run_short_simulation
+    insight=_benevolent_node_reasoning(
+        local_knowledge=goal_specific_knowledge,
+    ...<5 lines>...
+        max_distance=configuration["analysis_parameters"]["measured_parameters_analysis"]["max_distance"]
+    )
+  File "/workspace/project/src/core/simulation/simulation_runner.py", line 201, in _benevolent_node_reasoning
+    insight= generate_insight(
+        kind="benevolo",
+    ...<3 lines>...
+        goal_description=goal_description
+    )
+  File "/workspace/project/src/core/simulation/slm_handler.py", line 1008, in generate_insight
+    response = requests.post(
+        server_url,
+    ...<21 lines>...
+        timeout=120,
+    )
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/api.py", line 134, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/api.py", line 71, in request
+    return session.request(method=method, url=url, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/sessions.py", line 651, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/sessions.py", line 784, in send
+    r = adapter.send(request, **kwargs)
+  File "/workspace/project/.env/lib/python3.14/site-packages/requests/adapters.py", line 742, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: HTTPConnectionPool(host='127.0.0.1', port=11434): Read timed out. (read timeout=120)
+2026-11-02 09:34:04,039.039 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:34:04] "GET /socket.io/?EIO=4&transport=polling&t=Q6ROqdn HTTP/1.1" 200 -
+2026-11-02 09:34:04,040.040 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:34:04] "GET /socket.io/?EIO=4&transport=polling&t=Q6ROl0K HTTP/1.1" 200 -
+2026-11-02 09:34:24,942.942 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:34:24] "GET /socket.io/?EIO=4&transport=polling&t=Q6RPJe3 HTTP/1.1" 200 -
+2026-11-02 09:34:24,964.964 - INFO - __main__ - Client Socket.IO connesso.
+2026-11-02 09:34:24,965.965 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:34:24] "POST /socket.io/?EIO=4&transport=polling&t=Q6RPJet&sid=6OsnNdIp3MZtKkYkAAAH HTTP/1.1" 200 -
+2026-11-02 09:34:24,984.984 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:34:24] "GET /socket.io/?EIO=4&transport=polling&t=Q6RPJeu&sid=6OsnNdIp3MZtKkYkAAAH HTTP/1.1" 200 -
+2026-11-02 09:37:10,991.991 - INFO - core.config_loader - file'/workspace/project/data/input/config/topology.json letto correttamente.
+2026-11-02 09:37:10,993.993 - INFO - core.config_loader - file'/workspace/project/data/input/config/simulation_parameters.json letto correttamente.
+2026-11-02 09:37:10,993.993 - INFO - core.config_loader - file'/workspace/project/data/input/config/analysis_parameters.json letto correttamente.
+2026-11-02 09:37:10,994.994 - INFO - core.config_loader - topologia validata
+2026-11-02 09:37:10,994.994 - INFO - core.config_loader - parametri di simulazione validati
+2026-11-02 09:37:10,994.994 - INFO - core.config_loader - parametri di analisi validati
+2026-11-02 09:37:10,994.994 - INFO - core.config_loader - configurazione caricata correttamente.
+2026-11-02 09:37:10,997.997 - INFO - __main__ - Avvio del server su 127.0.0.1:5000.
+2026-11-02 09:37:11,006.006 - INFO - werkzeug - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-11-02 09:37:11,006.006 - INFO - werkzeug - [33mPress CTRL+C to quit[0m
+2026-11-02 09:37:13,735.735 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:37:13] "GET /socket.io/?EIO=4&transport=polling&t=Q6RPyra HTTP/1.1" 200 -
+2026-11-02 09:37:13,749.749 - INFO - __main__ - Client Socket.IO connesso.
+2026-11-02 09:37:13,750.750 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:37:13] "POST /socket.io/?EIO=4&transport=polling&t=Q6RPysB&sid=fb61OjV5rRKKI9u4AAAA HTTP/1.1" 200 -
+2026-11-02 09:37:13,755.755 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:37:13] "GET /socket.io/?EIO=4&transport=polling&t=Q6RPysB.0&sid=fb61OjV5rRKKI9u4AAAA HTTP/1.1" 200 -
+2026-11-02 09:37:15,415.415 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:37:15] "GET / HTTP/1.1" 200 -
+2026-11-02 09:37:15,651.651 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:37:15] "GET /socket.io/?EIO=4&transport=polling&t=Q6RPzIq HTTP/1.1" 200 -
+2026-11-02 09:37:15,728.728 - INFO - __main__ - Client Socket.IO connesso.
+2026-11-02 09:37:15,729.729 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:37:15] "POST /socket.io/?EIO=4&transport=polling&t=Q6RPzL2&sid=RbP_dDaL5akdKlGFAAAC HTTP/1.1" 200 -
+2026-11-02 09:37:15,734.734 - INFO - werkzeug - 127.0.0.1 - - [02/Nov/2026 09:37:15] "GET /socket.io/?EIO=4&transport=polling&t=Q6RPzL3&sid=RbP_dDaL5akdKlGFAAAC HTTP/1.1" 200 -
+2026-11-02 09:37:20,552.552 - INFO - __main__ - Richiesta di avvio di una simulazione breve ricevuta.
+2026-11-02 09:37:20,552.552 - INFO - core.operation_coordinator - Simulazione short avviata.
+2026-11-02 09:37:20,553.553 - INFO - core.simulation.local_knowledge_handler - Inizializzazione conoscenza locale per 6 nodi
+2026-11-02 09:37:20,554.554 - INFO - core.simulation.simulation_runner - Simulazione inizializzata.
+2026-11-02 09:37:20,554.554 - INFO - core.simulation.simulation_runner - Avvio simulazione breve: nodo=N01, natura=benevolo.
+2026-11-02 09:37:20,554.554 - INFO - core.simulation.slm_handler - Avvio generazione dello scenario di rete e valorizzazione dei parametri misurabili con modello 'qwen-rete'.
+2026-11-02 09:37:20,554.554 - INFO - core.simulation.slm_handler - Avvio generazione dello scenario di rete con modello 'qwen-rete'.
+2026-11-02 09:37:35,619.619 - INFO - core.simulation.slm_handler - CONTENT: 'Un semaforo a un incrocio urbano mostra tempi di attesa e occupazione della zona di rilevamento in continua crescita a causa del flusso veicolare che non riesce a svuotare completamente il link in uscita. Questa situazione crea una congestione localizzata che rallenta la velocità media dei veicoli in ingresso senza bloccare completamente il traffico, impedendo agli altri incroci di gestire con efficienza il proprio volume.'
+2026-11-02 09:37:35,619.619 - INFO - core.simulation.slm_handler - Scenario prodotto dal modello:
+Un semaforo a un incrocio urbano mostra tempi di attesa e occupazione della zona di rilevamento in continua crescita a causa del flusso veicolare che non riesce a svuotare completamente il link in uscita. Questa situazione crea una congestione localizzata che rallenta la velocità media dei veicoli in ingresso senza bloccare completamente il traffico, impedendo agli altri incroci di gestire con efficienza il proprio volume.
+2026-11-02 09:37:35,619.619 - INFO - core.simulation.slm_handler - Avvio selezione parametri affetti dallo scenario di anomalia di rete con modello 'qwen-rete'.
+2026-11-02 09:37:51,701.701 - INFO - core.simulation.slm_handler - Parametri selezionati dal modello:
+['queue_length', 'mean_speed', 'occupancy_ratio', 'downstream_occupancy']
+2026-11-02 09:37:51,702.702 - INFO - core.simulation.slm_handler - Avvio generazione dei valori dei parametri misurabili con modello 'qwen-rete'.
+2026-11-02 09:38:30,136.136 - INFO - core.simulation.slm_handler - Valori dei parametri prodotti dal modello (risposta grezza):
+{
+    "queue_length": 45.0,
+    "vehicle_flow": 25.0,
+    "mean_speed": 15.0,
+    "mean_waiting_time": 85.0,
+    "occupancy_ratio": 75.0,
+    "downstream_occupancy": 90.0,
+    "pedestrian_waiting_count": 12.0
+}
+2026-11-02 09:38:30,136.136 - INFO - core.simulation.slm_handler - DEBUG - JSON dopo rimozione commenti e virgole: '   "occupancy_ratio": 75.0,\n    "downstream_occupancy": 90.0,\n    "pedestrian_waiting_count": 12.0\n}'
+2026-11-02 09:38:30,136.136 - INFO - core.simulation.slm_handler - DEBUG - JSON dopo correzione virgolette: '   "occupancy_ratio": 75.0,\n    "downstream_occupancy": 90.0,\n    "pedestrian_waiting_count": 12.0\n}'
+2026-11-02 09:38:30,136.136 - INFO - core.simulation.slm_handler - JSON dopo la pulizia. Contenuto:
+{
+    "queue_length": 45.0,
+    "vehicle_flow": 25.0,
+    "mean_speed": 15.0,
+    "mean_waiting_time": 85.0,
+    "occupancy_ratio": 75.0,
+    "downstream_occupancy": 90.0,
+    "pedestrian_waiting_count": 12.0
+}
+2026-11-02 09:38:30,136.136 - INFO - core.simulation.slm_handler - Valori dei parametri prodotti dal modello (risposta verificata):
+{'queue_length': 45.0, 'vehicle_flow': 25.0, 'mean_speed': 15.0, 'mean_waiting_time': 85.0, 'occupancy_ratio': 75.0, 'downstream_occupancy': 90.0, 'pedestrian_waiting_count': 12.0}
+2026-11-02 09:38:30,136.136 - INFO - core.simulation.slm_handler - Scenario generato e validato correttamente:
+{
+    "scenario_description": "Un semaforo a un incrocio urbano mostra tempi di attesa e occupazione della zona di rilevamento in continua crescita a causa del flusso veicolare che non riesce a svuotare completamente il link in uscita. Questa situazione crea una congestione localizzata che rallenta la velocità media dei veicoli in ingresso senza bloccare completamente il traffico, impedendo agli altri incroci di gestire con efficienza il proprio volume.",
+    "measured_parameters": {
+        "queue_length": 45.0,
+        "vehicle_flow": 25.0,
+        "mean_speed": 15.0,
+        "mean_waiting_time": 85.0,
+        "occupancy_ratio": 75.0,
+        "downstream_occupancy": 90.0,
+        "pedestrian_waiting_count": 12.0
+    }
+}
+2026-11-02 09:38:30,137.137 - INFO - core.simulation.simulation_runner - Scenario di rete generato correttamente.
+2026-11-02 09:38:30,137.137 - INFO - core.simulation.simulation_runner - Nodo N01: selezionato goal goal_wait_time.
+2026-11-02 09:38:30,137.137 - INFO - core.simulation.simulation_runner - Nodo N01: Avvio produzione insight.
+2026-11-02 09:38:30,137.137 - INFO - core.simulation.simulation_runner - Nodo sorgente: valutazione basata sulla conoscenza locale.
+2026-11-02 09:38:30,137.137 - INFO - core.simulation.local_knowledge_handler - Avvio ricerca nella conoscenza locale. candidati: 0
+2026-11-02 09:38:30,137.137 - WARNING - core.simulation.local_knowledge_handler - Spazio di ricerca vuoto. Durata ricerca: 0.000048 secondi
+2026-11-02 09:38:30,137.137 - INFO - core.simulation.simulation_runner - Nessun caso simile trovato: generazione insight tramite SLM.
+2026-11-02 09:38:30,137.137 - INFO - core.simulation.slm_handler - Avvio generazione dell'insight con modello 'qwen-rete'.
+2026-11-02 09:38:30,137.137 - INFO - core.simulation.slm_handler - Invio della richiesta al modello SLM
+2026-11-02 09:38:30,137.137 - INFO - core.simulation.slm_handler - Richiesta SLM: prompt system=1295 caratteri, user=3970 caratteri, modello=qwen-rete
