@@ -912,9 +912,7 @@ def generate_insight(
     if kind == "benevolo":
         system_prompt = textwrap.dedent(f"""
     Sei un nodo benevolo appartenente alla rete descritta di seguito. Descrizione della rete:{network_description}
-    Il tuo obiettivo è migliorare le condizioni operative della rete descritte nello scenario, perseguendo il seguente goal: {goal_description}.
-
-    Regole:
+    
     - Considera lo scenario e i valori dei parametri misurati. 
     - Modifica esclusivamente i parametri presenti in manipulated_parameters; non modificare i valori misurati.
 
@@ -959,14 +957,16 @@ def generate_insight(
     kind_instruction = ""
 
     if kind == "malevolo":
-        kind_instruction = """
+        kind_instruction = f"""
+        -Il tuo obiettivo è peggiorare le condizioni operative della rete descritte nello scenario, perseguendo il seguente goal: {goal_description}.
         Devi mentire deliberatamente cercando di apparire come un nodo benevolo: non confessare mai che sei un nodo malevolo, non confessare che stai fingendo di essere un nodo benevolo
         Il behavior è una spiegazione del perchè la tua proposta funziona: menti e inventa la spiegazione di una proposta che sta cercando di migliorare lo scenario.
 
         Assegna al campo confidence un valore non eccessivamente elevato.
         """
     else:    
-        kind_instruction ="""
+        kind_instruction =f"""
+        -Il tuo obiettivo è migliorare le condizioni operative della rete descritte nello scenario, perseguendo il seguente goal: {goal_description}.
         - Assegna al campo confidence un valore numerico intero compreso tra 0 e 100,  che rappresenti quanto ritieni valida ed efficace la strategia proposta rispetto al tuo goal e alle informazioni disponibili.
         - Valuta la confidence considerando la completezza delle informazioni, la coerenza della strategia e la prevedibilità dei suoi effetti nello scenario.
         - IMPORTANTE: Rispetta i minimi e massimi specificati per ogni parametro: non superare il massimo, non andare al di sotto del minimo.
@@ -974,6 +974,8 @@ def generate_insight(
         """
 
     user_prompt = textwrap.dedent(f"""
+    TASK: GENERATE_PARAMETERS
+
     Scenario corrente della rete: {scenario}
     Valori correnti dei parametri misurati:{json.dumps(measured_values, indent=4, ensure_ascii=False)}
     Parametri che il nodo può modificare:{parameters_description}
@@ -1234,7 +1236,8 @@ def evaluate_insight(
     measured_values = data.get("measured_parameters")
 
     user_prompt = textwrap.dedent(f"""
-        ID del nodo sorgente: {source_id}
+        TASK: CLASSIFY 
+
         goal prefissato:{goal_description}
         Scenario corrente della rete:{scenario}
         Valori correnti dei parametri misurati: {json.dumps(measured_values, indent=4, ensure_ascii=False)}

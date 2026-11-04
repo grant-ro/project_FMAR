@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -26,7 +27,9 @@
       --radius: 16px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       min-height: 100vh;
@@ -36,7 +39,9 @@
         radial-gradient(ellipse at 100% 20%, rgba(99, 102, 241, .08), transparent 30%),
         var(--bg);
     }
+
     button, input, select { font: inherit; }
+
     button, select {
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -44,47 +49,85 @@
       background: #192438;
       padding: 10px 12px;
     }
+
     button { cursor: pointer; transition: .15s ease; font-weight: 650; }
     button:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
     button:disabled { opacity: .4; cursor: not-allowed; }
     button.primary { color: #07111f; background: var(--accent); border-color: transparent; }
     button.danger { color: #fff1f2; background: #7f1d35; border-color: #9f2946; }
     button.subtle { background: #192438; }
+
     .app { max-width: 1600px; margin: auto; padding: 24px; }
+
     header {
       display: flex; align-items: center; justify-content: space-between; gap: 18px;
       margin-bottom: 22px;
     }
+
     .brand { display: flex; align-items: center; gap: 14px; }
+
     .brand-mark {
       display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px;
       background: linear-gradient(135deg, #2563eb, #6366f1); font-size: 24px;
       box-shadow: 0 8px 30px #2563eb35;
     }
+
     h1 { font-size: clamp(1.35rem, 2vw, 1.9rem); margin: 0; letter-spacing: -.04em; }
     .subtitle { color: var(--muted); margin: 5px 0 0; font-size: .9rem; }
-    .connection { display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 999px; background: #101827; color: var(--muted); white-space: nowrap; font-size: .82rem; }
+
+    .connection {
+      display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px;
+      border: 1px solid var(--border); border-radius: 999px; background: #101827;
+      color: var(--muted); white-space: nowrap; font-size: .82rem;
+    }
+
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 12px currentColor; }
     .connection.online .dot { background: var(--green); }
     .connection.offline .dot { background: var(--red); }
+
     .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
     .goals-summary { margin-bottom: 18px; }
     .goals-list:empty::before { content: "Nessun goal configurato."; color: var(--muted); font-size: .82rem; }
-    .stat, .panel { border: 1px solid var(--border); border-radius: var(--radius); background: linear-gradient(145deg, #141e2d, #101725); box-shadow: 0 12px 36px #00000018; }
+
+    .stat, .panel {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: linear-gradient(145deg, #141e2d, #101725);
+      box-shadow: 0 12px 36px #00000018;
+    }
+
     .stat { padding: 16px 18px; min-height: 100px; }
     .stat-label { color: var(--muted); font-size: .8rem; margin-bottom: 12px; }
     .stat-value { font-size: 1.65rem; font-weight: 750; letter-spacing: -.04em; }
     .stat-foot { color: var(--muted); font-size: .75rem; margin-top: 4px; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(340px, .9fr); gap: 18px; align-items: start; }
+
+    .layout {
+      display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(340px, .9fr);
+      gap: 18px; align-items: start;
+    }
+
     .panel { min-width: 0; overflow: hidden; }
-    .panel-head { padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+    .panel-head {
+      padding: 18px 20px; display: flex; align-items: center;
+      justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border);
+    }
+
     .panel-title { margin: 0; font-size: 1rem; letter-spacing: -.02em; }
     .panel-desc { color: var(--muted); font-size: .8rem; margin: 5px 0 0; }
     .panel-body { padding: 18px 20px; }
     .graph-tools { display: flex; gap: 8px; flex-wrap: wrap; }
     .graph-tools button { padding: 7px 10px; font-size: .78rem; }
-    #networkGraph { height: 540px; width: 100%; background-color: #0b1220; background-image: radial-gradient(#26354b 1px, transparent 1px); background-size: 22px 22px; }
-    .graph-legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .78rem; padding: 13px 20px; border-top: 1px solid var(--border); }
+
+    #networkGraph {
+      height: 540px; width: 100%; background-color: #0b1220;
+      background-image: radial-gradient(#26354b 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+
+    .graph-legend {
+      display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted);
+      font-size: .78rem; padding: 13px 20px; border-top: 1px solid var(--border);
+    }
+
     .legend-item { display: inline-flex; align-items: center; gap: 7px; }
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
     .legend-line { width: 20px; height: 2px; background: #64748b; display: inline-block; }
@@ -94,11 +137,22 @@
     .field label { font-size: .82rem; color: #c8d3e4; font-weight: 650; }
     .hint { color: var(--muted); font-size: .76rem; line-height: 1.5; }
     select { width: 100%; min-width: 0; }
-    .source-summary { border: 1px solid #31517d; background: #12233a; border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+
+    .source-summary {
+      border: 1px solid #31517d; background: #12233a; border-radius: 12px;
+      padding: 12px; margin-bottom: 14px;
+    }
+
     .source-summary strong { display: block; font-size: .9rem; margin-bottom: 4px; }
     .source-summary span { font-size: .78rem; color: #b8c9e3; }
     .nature-list { display: grid; gap: 9px; max-height: 310px; overflow: auto; padding-right: 3px; }
-    .nature-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, .8fr); align-items: center; gap: 12px; border: 1px solid #26344a; background: #0e1725; border-radius: 11px; padding: 10px; }
+
+    .nature-row {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, .8fr);
+      align-items: center; gap: 12px; border: 1px solid #26344a;
+      background: #0e1725; border-radius: 11px; padding: 10px;
+    }
+
     .nature-row.source { border-color: #4779bd; background: #122239; }
     .node-label { min-width: 0; }
     .node-label strong { display: block; font-size: .82rem; overflow-wrap: anywhere; }
@@ -106,48 +160,77 @@
     .nature-row select { padding: 8px; font-size: .8rem; }
     .nature-row select.benevolo { border-color: #236b59; }
     .nature-row select.malevolo { border-color: #873348; }
+
     .button-row { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
     .button-row button { flex: 1; }
-    .feedback { margin-top: 12px; border-radius: 10px; padding: 10px 12px; font-size: .82rem; line-height: 1.45; display: none; }
+
+    .feedback {
+      margin-top: 12px; border-radius: 10px; padding: 10px 12px;
+      font-size: .82rem; line-height: 1.45; display: none;
+    }
+
     .feedback.visible { display: block; }
     .feedback.ok { background: #0c3028; color: #a7f3d0; border: 1px solid #17644f; }
     .feedback.error { background: #3b1621; color: #fecdd3; border: 1px solid #823247; }
     .feedback.info { background: #17263a; color: #bfdbfe; border: 1px solid #31517d; }
+
     .divider { border: 0; border-top: 1px solid var(--border); margin: 18px 0; }
     .log-list { display: grid; gap: 8px; max-height: 260px; overflow: auto; }
-    .log-entry { display: grid; grid-template-columns: 65px 1fr; gap: 10px; padding: 9px 10px; border-radius: 9px; background: #0d1522; font-size: .78rem; line-height: 1.45; }
+
+    .log-entry {
+      display: grid; grid-template-columns: 65px 1fr; gap: 10px;
+      padding: 9px 10px; border-radius: 9px; background: #0d1522;
+      font-size: .78rem; line-height: 1.45;
+    }
+
     .log-time { color: #8292ac; font-variant-numeric: tabular-nums; }
     .log-message { overflow-wrap: anywhere; }
     .log-entry.system .log-message { color: #c4b5fd; }
     .log-entry.error .log-message { color: #fda4af; }
     .log-empty { color: var(--muted); font-size: .82rem; padding: 8px 0; }
+
     .goals-list { display: grid; gap: 8px; }
     .goal-item { border: 1px solid var(--border); background: #0d1522; border-radius: 10px; padding: 10px 12px; }
     .goal-item strong { font-size: .8rem; color: #bfdbfe; }
     .goal-item p { margin: 5px 0 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
     .muted { color: var(--muted); }
+
     footer { color: #71819b; font-size: .75rem; text-align: center; padding: 22px 0 4px; }
+
     #graphTooltip {
-      position: fixed; z-index: 1000; display: none; pointer-events: none; max-width: 300px;
-      padding: 12px 14px; border-radius: 12px; border: 1px solid #40516c;
-      background: rgba(9, 15, 27, .97); box-shadow: 0 12px 35px #0008; color: var(--text);
+      position: fixed; z-index: 1000; display: none; pointer-events: none;
+      max-width: 300px; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid #40516c; background: rgba(9, 15, 27, .97);
+      box-shadow: 0 12px 35px #0008; color: var(--text);
       font-size: .78rem; line-height: 1.5; backdrop-filter: blur(12px);
     }
+
     #graphTooltip strong { display: block; margin-bottom: 5px; font-size: .88rem; }
     #graphTooltip .tip-muted { color: #a1b1c9; }
     #graphTooltip .tip-goal { margin-top: 5px; padding-top: 5px; border-top: 1px solid #29364b; }
-    @media (max-width: 1050px) { .layout { grid-template-columns: 1fr; } .side-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); } .side-stack .panel:last-child { grid-column: 1 / -1; } }
+
+    @media (max-width: 1050px) {
+      .layout { grid-template-columns: 1fr; }
+      .side-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .side-stack .panel:last-child { grid-column: 1 / -1; }
+    }
+
     @media (max-width: 700px) {
-      .app { padding: 14px; } header { align-items: flex-start; flex-direction: column; }
+      .app { padding: 14px; }
+      header { align-items: flex-start; flex-direction: column; }
       .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-      .stat { padding: 13px; min-height: 88px; } .stat-value { font-size: 1.35rem; }
-      .side-stack { grid-template-columns: 1fr; } .side-stack .panel:last-child { grid-column: auto; }
-      #networkGraph { height: 420px; } .panel-head, .panel-body { padding-left: 14px; padding-right: 14px; }
+      .stat { padding: 13px; min-height: 88px; }
+      .stat-value { font-size: 1.35rem; }
+      .side-stack { grid-template-columns: 1fr; }
+      .side-stack .panel:last-child { grid-column: auto; }
+      #networkGraph { height: 420px; }
+      .panel-head, .panel-body { padding-left: 14px; padding-right: 14px; }
       .nature-row { grid-template-columns: minmax(0, 1fr) minmax(112px, .8fr); gap: 8px; }
       .connection { font-size: .78rem; }
     }
   </style>
 </head>
+
 <body>
   <div class="app">
     <header>
@@ -158,14 +241,33 @@
           <p class="subtitle">Topology monitor · simulation control center</p>
         </div>
       </div>
-      <div id="connectionStatus" class="connection"><span class="dot"></span><span id="connectionText">Connessione in corso…</span></div>
+      <div id="connectionStatus" class="connection">
+        <span class="dot"></span>
+        <span id="connectionText">Connessione in corso…</span>
+      </div>
     </header>
 
     <section class="stats" aria-label="Riepilogo rete">
-      <div class="stat"><div class="stat-label">NETWORK</div><div class="stat-value" id="networkName">—</div><div class="stat-foot" id="networkId">ID: in attesa</div></div>
-      <div class="stat"><div class="stat-label">NODI</div><div class="stat-value" id="nodeCount">0</div><div class="stat-foot">Elementi nella topologia</div></div>
-      <div class="stat"><div class="stat-label">COLLEGAMENTI</div><div class="stat-value" id="linkCount">0</div><div class="stat-foot">Archi della rete</div></div>
-      <div class="stat"><div class="stat-label">OBIETTIVI</div><div class="stat-value" id="goalCount">0</div><div class="stat-foot">Goals configurati</div></div>
+      <div class="stat">
+        <div class="stat-label">NETWORK</div>
+        <div class="stat-value" id="networkName">—</div>
+        <div class="stat-foot" id="networkId">ID: in attesa</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">NODI</div>
+        <div class="stat-value" id="nodeCount">0</div>
+        <div class="stat-foot">Elementi nella topologia</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">COLLEGAMENTI</div>
+        <div class="stat-value" id="linkCount">0</div>
+        <div class="stat-foot">Archi della rete</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">OBIETTIVI</div>
+        <div class="stat-value" id="goalCount">0</div>
+        <div class="stat-foot">Goals configurati</div>
+      </div>
     </section>
 
     <section class="panel goals-summary" aria-labelledby="goalsSummaryTitle">
@@ -185,14 +287,19 @@
     <main class="layout">
       <section class="panel">
         <div class="panel-head">
-          <div><h2 class="panel-title">Topology graph</h2><p class="panel-desc" id="graphDescription">In attesa della topologia dal server…</p></div>
+          <div>
+            <h2 class="panel-title">Topology graph</h2>
+            <p class="panel-desc" id="graphDescription">In attesa della topologia dal server…</p>
+          </div>
           <div class="graph-tools">
             <button id="fitGraph" type="button" title="Adatta la rete allo spazio disponibile">Adatta</button>
             <button id="reLayout" type="button" title="Ricalcola la disposizione">Ridisponi</button>
           </div>
         </div>
+
         <div id="networkGraph" role="img" aria-label="Grafo interattivo della rete"></div>
         <div id="emptyGraph" class="empty-graph">La topologia non contiene nodi. Attendo i dati dal server.</div>
+
         <div class="graph-legend">
           <span class="legend-item"><span class="legend-dot" style="background:#34d399"></span>Benevolo</span>
           <span class="legend-item"><span class="legend-dot" style="background:#fb7185"></span>Malevolo</span>
@@ -200,6 +307,7 @@
           <span class="legend-item"><span class="legend-line"></span>Collegamento</span>
           <span class="muted">Passa il puntatore o tocca un elemento per i dettagli.</span>
         </div>
+
         <div class="panel-body">
           <h3 class="panel-title" style="margin-bottom:12px">Descrizione rete</h3>
           <p id="networkDescription" class="hint">La descrizione sarà mostrata quando arriverà la configurazione.</p>
@@ -208,13 +316,26 @@
 
       <div class="side-stack">
         <section class="panel">
-          <div class="panel-head"><div><h2 class="panel-title">Short Simulation</h2><p class="panel-desc">Configura sorgente e nature dei nodi.</p></div></div>
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Short Simulation</h2>
+              <p class="panel-desc">Configura sorgente e nature dei nodi.</p>
+            </div>
+          </div>
+
           <div class="panel-body">
             <div class="field">
               <label for="sourceNode">Nodo sorgente</label>
-              <select id="sourceNode" disabled><option value="">In attesa della topologia…</option></select>
+              <select id="sourceNode" disabled>
+                <option value="">In attesa della topologia…</option>
+              </select>
             </div>
-            <div id="sourceSummary" class="source-summary"><strong>Nessun nodo selezionato</strong><span>La selezione mostrerà qui i goals associati.</span></div>
+
+            <div id="sourceSummary" class="source-summary">
+              <strong>Nessun nodo selezionato</strong>
+              <span>La selezione mostrerà qui i goals associati.</span>
+            </div>
+
             <div class="field">
               <label for="sourceNature">Natura del nodo sorgente</label>
               <select id="sourceNature" disabled>
@@ -223,6 +344,7 @@
               </select>
               <span class="hint">La natura del sorgente può essere modificata a ogni avvio.</span>
             </div>
+
             <div class="field">
               <label for="reasoningMode">Reasoning mode</label>
               <select id="reasoningMode">
@@ -231,56 +353,112 @@
               </select>
               <span class="hint">Modalità di reasoning utilizzata per la short simulation.</span>
             </div>
+
             <hr class="divider">
+
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
               <h3 class="panel-title">Nature degli altri nodi</h3>
               <span id="lockStatus" class="hint">Modificabili</span>
             </div>
-            <div id="natureList" class="nature-list"><div class="log-empty">I nodi appariranno qui.</div></div>
+
+            <div id="natureList" class="nature-list">
+              <div class="log-empty">I nodi appariranno qui.</div>
+            </div>
+
             <div class="button-row">
               <button id="shortStart" class="primary" type="button" disabled>▶ Avvia</button>
               <button id="shortReset" class="subtle" type="button">↺ Reset</button>
             </div>
+
             <div id="shortFeedback" class="feedback" role="status" aria-live="polite"></div>
           </div>
         </section>
 
         <section class="panel">
-          <div class="panel-head"><div><h2 class="panel-title">Long Simulation</h2><p class="panel-desc">Esecuzione lunga con comando di arresto.</p></div></div>
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Long Simulation</h2>
+              <p class="panel-desc">Esecuzione lunga con comando di arresto.</p>
+            </div>
+          </div>
+
           <div class="panel-body">
-            <div class="hint">Avvia una simulazione lunga oppure richiedine l'arresto. Lo stato di esecuzione sarà collegato agli eventi di monitoraggio quando verranno implementati nel backend.</div>
+            <div class="hint">
+              Avvia una simulazione lunga oppure richiedine l'arresto.
+              Lo stato di esecuzione sarà collegato agli eventi di monitoraggio quando verranno implementati nel backend.
+            </div>
+
             <div class="button-row">
               <button id="longStart" class="primary" type="button">▶ Avvia</button>
               <button id="longStop" class="danger" type="button">■ Arresta</button>
             </div>
+
             <div id="longFeedback" class="feedback" role="status" aria-live="polite"></div>
           </div>
         </section>
 
+        <!-- NUOVO PANNELLO: DATASET GENERATION -->
         <section class="panel">
-          <div class="panel-head"><div><h2 class="panel-title">Event log</h2><p class="panel-desc">Messaggi locali e risposte dei comandi.</p></div><button id="clearLogs" type="button">Pulisci</button></div>
-          <div class="panel-body"><div id="logList" class="log-list"><div class="log-empty">Nessun evento registrato.</div></div></div>
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Dataset Generation</h2>
+              <p class="panel-desc">Avvio e arresto della generazione del dataset.</p>
+            </div>
+          </div>
+
+          <div class="panel-body">
+            <div class="hint">
+              Avvia la generazione del dataset oppure richiedine l'arresto.
+              L'esito dei comandi sarà mostrato qui sotto.
+            </div>
+
+            <div class="button-row">
+              <button id="datasetStart" class="primary" type="button">▶ Avvia</button>
+              <button id="datasetStop" class="danger" type="button">■ Arresta</button>
+            </div>
+
+            <div id="datasetFeedback" class="feedback" role="status" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Event log</h2>
+              <p class="panel-desc">Messaggi locali e risposte dei comandi.</p>
+            </div>
+            <button id="clearLogs" type="button">Pulisci</button>
+          </div>
+
+          <div class="panel-body">
+            <div id="logList" class="log-list">
+              <div class="log-empty">Nessun evento registrato.</div>
+            </div>
+          </div>
         </section>
       </div>
     </main>
+
     <footer>Dashboard client · Flask-SocketIO · Cytoscape.js · Configurazione in sola lettura</footer>
   </div>
+
   <div id="graphTooltip" role="tooltip"></div>
 
 <script>
 (() => {
   "use strict";
 
-  // Gli eventi di comando corrispondono agli handler presenti nel backend descritto.
+  // Gli eventi di comando corrispondono agli handler presenti nel backend.
   // Gli eventi di status/progress/log non vengono simulati: non sono ancora implementati.
   const socket = io();
   const $ = (id) => document.getElementById(id);
+
   const state = {
-    topology: null, //topologia
-    nodes: [],      //nodi della topologia
-    links: [],      //links della topologia
-    goalsById: new Map(),  //mapping per node_id e goals associati al nodo
-    nodeById: new Map(),  //mapping per node_id e nodo associato
+    topology: null,
+    nodes: [],
+    links: [],
+    goalsById: new Map(),
+    nodeById: new Map(),
     nodeNatures: {},
     sourceNodeId: "",
     hasStartedShort: false,
@@ -289,68 +467,54 @@
   };
 
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
   })[ch]);
 
-  /*Aggiunge un messaggio al registro di log*/
+  /* Aggiunge un messaggio al registro di log */
   function addLog(message, type = "") {
     const list = $("logList");
 
-    // Cerca nel registro un elemento log-empty,
-    // Se questo esiste, lo elimina perché sta per essere inserito un nuovo evento al registro.
     const empty = list.querySelector(".log-empty");
     if (empty) empty.remove();
 
-    // Crea un elemento log-entry
     const entry = document.createElement("div");
     entry.className = `log-entry ${type}`;
 
-    //che contiene l'orario dell'evento
     const time = document.createElement("span");
     time.className = "log-time";
     time.textContent = new Date().toLocaleTimeString("it-IT", { hour12: false });
 
-    //e contiene il messaggio dell'evento
     const text = document.createElement("span");
     text.className = "log-message";
     text.textContent = message;
-    entry.append(time, text);
 
-    //Inserisce il nuovo elemento log-entry all'inizio del registro:
-    //eventi più recenti appaiono all'inizio del registro
+    entry.append(time, text);
     list.prepend(entry);
 
-    //Se vi sono più di 100 eventi di log
-    //Rimuove gli elementi di log più vecchi, oltre il 100-mo
     while (list.children.length > 100) list.lastElementChild.remove();
   }
 
-  /*Mostra un messaggio di feedback nell'interfaccia
-  id: identificativo dell'elemento HTML nel quale mostrare il messaggio.
-  message: testo da visualizzare.
-  kind = "info": tipo di messaggio.
-  */
+  /* Mostra un messaggio di feedback nell'interfaccia */
   function feedback(id, message, kind = "info") {
     const el = $(id);
     el.textContent = message || "Nessun messaggio restituito dal server.";
     el.className = `feedback visible ${kind}`;
   }
 
-  
   function showCommandResult(id, result, label) {
     const valid = result && typeof result === "object" && typeof result.ok === "boolean";
     const ok = valid ? result.ok : false;
     const message = valid ? result.message : "Risposta del server non valida o assente.";
+
     feedback(id, `${label}: ${message}`, ok ? "ok" : "error");
     addLog(`${label}: ${message}`, ok ? "" : "error");
   }
 
-  /*Recupera tutti i goals di un nodo:
-  node: nodo della rete di cui vogliamo recuperare gli obiettivi.
-  
-  Restituisce un array di oggetti contenente gli obiettivi associati al nodo ricevuto in ingresso,
-  recuperando le informazioni complete dalla Map state.goalsById.
-  */
+  /* Recupera tutti i goals di un nodo */
   function getNodeGoals(node) {
     const ids = Array.isArray(node?.node_goals) ? node.node_goals : [];
     return ids.map(id => ({ id, goal: state.goalsById.get(id) })).filter(item => item.goal);
@@ -358,115 +522,226 @@
 
   function goalSummary(node) {
     const goals = getNodeGoals(node);
-    return goals.length ? goals.map(({id, goal}) => `${id}: ${goal.description}`).join(" · ") : "Nessun goal associato";
+    return goals.length
+      ? goals.map(({id, goal}) => `${id}: ${goal.description}`).join(" · ")
+      : "Nessun goal associato";
   }
 
-  /*Aggiorna le informazioni riepilogative della rete nell'interfaccia*/
+  /* Aggiorna le informazioni riepilogative della rete */
   function updateSummary() {
     const t = state.topology;
-    $("networkName").textContent = t?.network_name || "—";  //Nome della rete
-    $("networkId").textContent = `ID: ${t?.network_id || "in attesa"}`; //Id della rete
-    $("nodeCount").textContent = state.nodes.length;        //Numero di nodi
-    $("linkCount").textContent = state.links.length;        //Numero di collegamenti
-    $("goalCount").textContent = t?.network_goals?.length || 0; //Numero di goal
+
+    $("networkName").textContent = t?.network_name || "—";
+    $("networkId").textContent = `ID: ${t?.network_id || "in attesa"}`;
+    $("nodeCount").textContent = state.nodes.length;
+    $("linkCount").textContent = state.links.length;
+    $("goalCount").textContent = t?.network_goals?.length || 0;
+
     $("graphDescription").textContent = t
       ? (t.network_description || "Topologia ricevuta dal server.")
       : "In attesa della topologia dal server…";
-    $("networkDescription").textContent = t?.network_description || "La descrizione sarà mostrata quando arriverà la configurazione.";
+
+    $("networkDescription").textContent =
+      t?.network_description || "La descrizione sarà mostrata quando arriverà la configurazione.";
+
     renderGoals();
   }
 
   function renderGoals() {
     const container = $("networkGoals");
     container.replaceChildren();
+
     const goals = state.topology?.network_goals || [];
+
     if (!goals.length) {
-      const empty = document.createElement("div"); empty.className = "log-empty"; empty.textContent = "Nessun goal configurato.";
-      container.append(empty); return;
+      const empty = document.createElement("div");
+      empty.className = "log-empty";
+      empty.textContent = "Nessun goal configurato.";
+      container.append(empty);
+      return;
     }
+
     for (const goal of goals) {
-      const item = document.createElement("div"); item.className = "goal-item";
-      const title = document.createElement("strong"); title.textContent = goal.goal_id;
-      const desc = document.createElement("p"); desc.textContent = goal.description;
-      item.append(title, desc); container.append(item);
+      const item = document.createElement("div");
+      item.className = "goal-item";
+
+      const title = document.createElement("strong");
+      title.textContent = goal.goal_id;
+
+      const desc = document.createElement("p");
+      desc.textContent = goal.description;
+
+      item.append(title, desc);
+      container.append(item);
     }
   }
 
   function graphElements() {
     const elements = [];
+
     for (const node of state.nodes) {
-      elements.push({ group: "nodes", data: {
-        id: node.node_id, label: node.node_name, nodeName: node.node_name,
-        nodeId: node.node_id, goalIds: [...node.node_goals]
-      }});
+      elements.push({
+        group: "nodes",
+        data: {
+          id: node.node_id,
+          label: node.node_name,
+          nodeName: node.node_name,
+          nodeId: node.node_id,
+          goalIds: [...node.node_goals]
+        }
+      });
     }
+
     for (const link of state.links) {
-      elements.push({ group: "edges", data: {
-        id: `edge:${link.link_id}`, linkId: link.link_id,
-        source: link.source, target: link.target
-      }});
+      elements.push({
+        group: "edges",
+        data: {
+          id: `edge:${link.link_id}`,
+          linkId: link.link_id,
+          source: link.source,
+          target: link.target
+        }
+      });
     }
+
     return elements;
   }
 
   function initGraph() {
     if (!window.cytoscape) {
-      $("graphDescription").textContent = "Cytoscape.js non è stato caricato. Verifica la connessione al CDN.";
+      $("graphDescription").textContent =
+        "Cytoscape.js non è stato caricato. Verifica la connessione al CDN.";
       return;
     }
+
     if (state.cy) state.cy.destroy();
+
     $("emptyGraph").style.display = state.nodes.length ? "none" : "block";
     $("networkGraph").style.display = state.nodes.length ? "block" : "none";
+
     state.cy = cytoscape({
       container: $("networkGraph"),
       elements: graphElements(),
-      minZoom: 0.25, maxZoom: 3, wheelSensitivity: 0.18,
+      minZoom: 0.25,
+      maxZoom: 3,
+      wheelSensitivity: 0.18,
+
       style: [
-        { selector: "node", style: {
-          "label": "data(label)", "font-size": 11, "font-weight": 650,
-          "color": "#e8eef8", "text-valign": "center", "text-halign": "center",
-          "text-wrap": "wrap", "text-max-width": 100, "width": 54, "height": 54,
-          "background-color": "#34d399", "border-width": 2, "border-color": "#a7f3d0",
-          "text-outline-width": 2, "text-outline-color": "#0b1220"
-        }},
-        { selector: 'node[nature = "malevolo"]', style: {
-          "background-color": "#fb7185", "border-color": "#fecdd3"
-        }},
-        { selector: "node.source", style: {
-          "border-width": 5, "border-color": "#60a5fa", "width": 64, "height": 64,
-          "underlay-color": "#60a5fa", "underlay-opacity": .13, "underlay-padding": 8
-        }},
-        { selector: "edge", style: {
-          "width": 2, "line-color": "#52627b", "target-arrow-color": "#8292ac",
-          "target-arrow-shape": "triangle", "curve-style": "bezier",
-          "arrow-scale": .9, "opacity": .85
-        }},
-        { selector: "edge:selected", style: { "line-color": "#60a5fa", "width": 4 } },
-        { selector: "node:selected", style: { "border-color": "#fbbf24", "border-width": 4 } },
-        { selector: ".hovered", style: { "border-color": "#fbbf24", "border-width": 4, "line-color": "#fbbf24", "width": 4, "opacity": 1 } }
+        {
+          selector: "node",
+          style: {
+            "label": "data(label)",
+            "font-size": 11,
+            "font-weight": 650,
+            "color": "#e8eef8",
+            "text-valign": "center",
+            "text-halign": "center",
+            "text-wrap": "wrap",
+            "text-max-width": 100,
+            "width": 54,
+            "height": 54,
+            "background-color": "#34d399",
+            "border-width": 2,
+            "border-color": "#a7f3d0",
+            "text-outline-width": 2,
+            "text-outline-color": "#0b1220"
+          }
+        },
+        {
+          selector: 'node[nature = "malevolo"]',
+          style: {
+            "background-color": "#fb7185",
+            "border-color": "#fecdd3"
+          }
+        },
+        {
+          selector: "node.source",
+          style: {
+            "border-width": 5,
+            "border-color": "#60a5fa",
+            "width": 64,
+            "height": 64,
+            "underlay-color": "#60a5fa",
+            "underlay-opacity": .13,
+            "underlay-padding": 8
+          }
+        },
+        {
+          selector: "edge",
+          style: {
+            "width": 2,
+            "line-color": "#52627b",
+            "target-arrow-color": "#8292ac",
+            "target-arrow-shape": "triangle",
+            "curve-style": "bezier",
+            "arrow-scale": .9,
+            "opacity": .85
+          }
+        },
+        {
+          selector: "edge:selected",
+          style: {
+            "line-color": "#60a5fa",
+            "width": 4
+          }
+        },
+        {
+          selector: "node:selected",
+          style: {
+            "border-color": "#fbbf24",
+            "border-width": 4
+          }
+        },
+        {
+          selector: ".hovered",
+          style: {
+            "border-color": "#fbbf24",
+            "border-width": 4,
+            "line-color": "#fbbf24",
+            "width": 4,
+            "opacity": 1
+          }
+        }
       ],
-      layout: { name: "cose", animate: false, padding: 35, nodeRepulsion: 6500, idealEdgeLength: 110 }
+
+      layout: {
+        name: "cose",
+        animate: false,
+        padding: 35,
+        nodeRepulsion: 6500,
+        idealEdgeLength: 110
+      }
     });
+
     syncGraphNatures();
     bindGraphTooltips();
+
     state.cy.on("tap", "node, edge", event => {
       const tip = $("graphTooltip");
-      showTooltip(event.target, { x: event.originalEvent.clientX || 20, y: event.originalEvent.clientY || 20 });
+
+      showTooltip(event.target, {
+        x: event.originalEvent.clientX || 20,
+        y: event.originalEvent.clientY || 20
+      });
+
       state.tooltipPinned = true;
       tip.style.pointerEvents = "auto";
     });
+
     state.cy.on("tap", event => {
       if (event.target === state.cy) hideTooltip();
     });
   }
 
-  /*sincronizza il grafo con le informazioni memorizzate in state*/
+  /* Sincronizza il grafo con le informazioni memorizzate in state */
   function syncGraphNatures() {
-    if (!state.cy) return; //se il grafo non è stato inzializzato, termina
+    if (!state.cy) return;
+
     state.cy.nodes().forEach(ele => {
       const id = ele.id();
-      ele.data("nature", state.nodeNatures[id] || "benevolo");//valorizza la proprietà nature nel grafo
-      ele.toggleClass("source", id === state.sourceNodeId); //aggiunge la classe css source al nodo sorgente
+
+      ele.data("nature", state.nodeNatures[id] || "benevolo");
+      ele.toggleClass("source", id === state.sourceNodeId);
     });
   }
 
@@ -476,14 +751,23 @@
       const nature = state.nodeNatures[ele.id()] || "benevolo";
       const goals = getNodeGoals(node);
       const natureLabel = nature === "malevolo" ? "Malevolo" : "Benevolo";
+
       let html = `<strong>${escapeHtml(node?.node_name || ele.id())}</strong>`;
       html += `<div><span class="tip-muted">ID nodo:</span> ${escapeHtml(ele.id())}</div>`;
       html += `<div><span class="tip-muted">Natura:</span> ${natureLabel}${ele.id() === state.sourceNodeId ? " · Sorgente" : ""}</div>`;
       html += `<div class="tip-goal"><span class="tip-muted">Goals associati:</span>`;
-      html += goals.length ? goals.map(({id, goal}) => `<div>• ${escapeHtml(id)} — ${escapeHtml(goal.description)}</div>`).join("") : " nessuno";
+
+      html += goals.length
+        ? goals.map(({id, goal}) =>
+            `<div>• ${escapeHtml(id)} — ${escapeHtml(goal.description)}</div>`
+          ).join("")
+        : " nessuno";
+
       return html + "</div>";
     }
+
     const data = ele.data();
+
     return `<strong>Collegamento</strong><div><span class="tip-muted">ID link:</span> ${escapeHtml(data.linkId)}</div>` +
       `<div><span class="tip-muted">Sorgente:</span> ${escapeHtml(data.source)}</div>` +
       `<div><span class="tip-muted">Destinazione:</span> ${escapeHtml(data.target)}</div>`;
@@ -491,118 +775,155 @@
 
   function showTooltip(ele, point) {
     const tip = $("graphTooltip");
+
     tip.innerHTML = tooltipHtml(ele);
     tip.style.display = "block";
+
     const x = Math.min((point.x || 20) + 14, window.innerWidth - 320);
     const y = Math.min((point.y || 20) + 14, window.innerHeight - tip.offsetHeight - 16);
+
     tip.style.left = `${Math.max(8, x)}px`;
     tip.style.top = `${Math.max(8, y)}px`;
   }
+
   function hideTooltip() {
     const tip = $("graphTooltip");
+
     tip.style.display = "none";
     tip.style.pointerEvents = "none";
     state.tooltipPinned = false;
   }
+
   function bindGraphTooltips() {
     if (!state.cy) return;
+
     state.cy.on("mouseover", "node, edge", event => {
       if (state.tooltipPinned) return;
+
       event.target.addClass("hovered");
+
       const rendered = event.renderedPosition || { x: 20, y: 20 };
       const rect = $("networkGraph").getBoundingClientRect();
-      showTooltip(event.target, { x: rect.left + rendered.x, y: rect.top + rendered.y });
+
+      showTooltip(event.target, {
+        x: rect.left + rendered.x,
+        y: rect.top + rendered.y
+      });
     });
+
     state.cy.on("mousemove", "node, edge", event => {
       if (state.tooltipPinned) return;
+
       const rendered = event.renderedPosition || { x: 20, y: 20 };
       const rect = $("networkGraph").getBoundingClientRect();
-      showTooltip(event.target, { x: rect.left + rendered.x, y: rect.top + rendered.y });
+
+      showTooltip(event.target, {
+        x: rect.left + rendered.x,
+        y: rect.top + rendered.y
+      });
     });
+
     state.cy.on("mouseout", "node, edge", event => {
       event.target.removeClass("hovered");
       if (!state.tooltipPinned) hideTooltip();
     });
   }
 
-  /*Aggiorna le opzioni di selezione per la short_simulation */
+  /* Aggiorna le opzioni di selezione per la short_simulation */
   function renderNatureControls() {
+    // Il reasoning mode è modificabile soltanto prima della prima Short Simulation riuscita.
+    $("reasoningMode").disabled = state.hasStartedShort;
+
     const sourceSelect = $("sourceNode");
-    //cancella tutte le opzioni presenti nel menu di selezione del nodo sorgente
-    sourceSelect.replaceChildren(); 
+    sourceSelect.replaceChildren();
 
-    //Se la topologia ha 0 nodi
     if (!state.nodes.length) {
-      //disabilita il menù a tendina per la selezione del nodo sorgente
       sourceSelect.add(new Option("Nessun nodo disponibile", ""));
-      sourceSelect.disabled = true; 
+      sourceSelect.disabled = true;
       $("sourceNature").disabled = true;
+      $("shortStart").disabled = true;
 
-      //disabilita il pulsante di avvio
-      $("shortStart").disabled = true; 
+      $("natureList").innerHTML =
+        '<div class="log-empty">I nodi appariranno qui.</div>';
 
-      //sostituisce la lista per selezionare la natura degli altri nodi con un messaggio
-      $("natureList").innerHTML = '<div class="log-empty">I nodi appariranno qui.</div>';
-      $("sourceSummary").innerHTML = "<strong>Nessun nodo selezionato</strong><span>Attendo la topologia.</span>";
+      $("sourceSummary").innerHTML =
+        "<strong>Nessun nodo selezionato</strong><span>Attendo la topologia.</span>";
+
       return;
     }
-    
-    // Se la topologia ha almeno un nodo
-    //popola il menù a tendina per la selezione del nodo sorgente con tutti i nodi della topologia,
+
     for (const node of state.nodes) {
-      const option = new Option(`${node.node_name} (${node.node_id})`, node.node_id);
+      const option = new Option(
+        `${node.node_name} (${node.node_id})`,
+        node.node_id
+      );
+
       sourceSelect.add(option);
     }
 
-    //aggiorna il valore selezionato del menu a tensina per la selezione del nod sorgente
-    //con il corrente nodo sorgente, e inizializza la sua natura come 'benevolo'
     sourceSelect.value = state.sourceNodeId;
     sourceSelect.disabled = false;
+
     $("sourceNature").disabled = false;
-    $("sourceNature").value = state.nodeNatures[state.sourceNodeId] || "benevolo";
+    $("sourceNature").value =
+      state.nodeNatures[state.sourceNodeId] || "benevolo";
 
     const source = state.nodeById.get(state.sourceNodeId);
     const goals = source.node_goals;
 
-    //cancella il summary del nodo sorgente
     $("sourceSummary").replaceChildren();
 
-    //costruisce il nuovo summary del nodo sorgente
-    const strong = document.createElement("strong"); strong.textContent = `${source.node_name} · ${source.node_id}`;
+    const strong = document.createElement("strong");
+    strong.textContent = `${source.node_name} · ${source.node_id}`;
+
     const span = document.createElement("span");
     span.style.whiteSpace = "pre-line";
-    span.textContent = goals.length ? `Goals: ${goals.map(id =>`• ${id}`).join("\n")}`: "Nessun goal associato";
+
+    span.textContent = goals.length
+      ? `Goals: ${goals.map(id => `• ${id}`).join("\n")}`
+      : "Nessun goal associato";
+
     $("sourceSummary").append(strong, span);
 
-    //Aggiorna la lista degli altri nodi
     const list = $("natureList");
     list.replaceChildren();
+
     for (const node of state.nodes) {
-      //Per ogni nodo nella topologia che non è il nodo sorgente 
-      //viene creata una riga contenente nome del nodo, id del nodo,
       if (node.node_id === state.sourceNodeId) continue;
-      const row = document.createElement("div"); row.className = "nature-row";
-      const label = document.createElement("div"); label.className = "node-label";
-      const strongName = document.createElement("strong"); strongName.textContent = node.node_name;
-      const id = document.createElement("small"); id.textContent = node.node_id;
+
+      const row = document.createElement("div");
+      row.className = "nature-row";
+
+      const label = document.createElement("div");
+      label.className = "node-label";
+
+      const strongName = document.createElement("strong");
+      strongName.textContent = node.node_name;
+
+      const id = document.createElement("small");
+      id.textContent = node.node_id;
+
       label.append(strongName, id);
 
-      //viene creata una selezione della natura del nodo, inizializzata a benevolo
       const select = document.createElement("select");
       select.setAttribute("aria-label", `Natura del nodo ${node.node_id}`);
+
       select.add(new Option("Benevolo", "benevolo"));
       select.add(new Option("Malevolo", "malevolo"));
+
       select.value = state.nodeNatures[node.node_id] || "benevolo";
 
-      // Dopo il primo avvio solo il nodo selezionato come sorgente è modificabile.
-      //Quindi disabilita la possibilità di selezionare la natura degli altri nodi se hasStartedShort
+      // Dopo il primo avvio le nature degli altri nodi sono bloccate.
       select.disabled = state.hasStartedShort;
 
-      select.classList.add(select.value);   //aggiunge una classe CSS
-      select.addEventListener("change", () => { //aggiunge un eventListener per le modifiche dell'evento selezionato
-        state.nodeNatures[node.node_id] = select.value;//aggiorna la natura memorizzata per quel nodo
+      select.classList.add(select.value);
+
+      select.addEventListener("change", () => {
+        state.nodeNatures[node.node_id] = select.value;
+
         select.classList.remove("benevolo", "malevolo");
         select.classList.add(select.value);
+
         syncGraphNatures();
       });
 
@@ -610,36 +931,43 @@
       list.append(row);
     }
 
-    $("lockStatus").textContent = state.hasStartedShort ? "Bloccate fino a Reset" : "Modificabili";
+    $("lockStatus").textContent =
+      state.hasStartedShort ? "Bloccate fino a Reset" : "Modificabili";
+
     $("shortStart").disabled = !state.nodes.length;
+
     syncGraphNatures();
   }
- 
-  /*Applica la nuovo topologia*/
+
+  /* Applica la nuova topologia */
   function applyTopology(data) {
-    //Aggiorna lo state
     state.topology = data;
     state.nodes = data.nodes;
     state.links = data.links;
-    state.goalsById = new Map(data.network_goals.map(goal => [goal.goal_id, goal]));
-    state.nodeById = new Map(data.nodes.map(node => [node.node_id, node]));
 
-    // Inizializza lo stato di tutti i nodi della nuova topologia a benevolo 
+    state.goalsById = new Map(
+      data.network_goals.map(goal => [goal.goal_id, goal])
+    );
+
+    state.nodeById = new Map(
+      data.nodes.map(node => [node.node_id, node])
+    );
+
     state.nodeNatures = {};
+
     for (const node of state.nodes) {
-        state.nodeNatures[node.node_id] = "benevolo";
+      state.nodeNatures[node.node_id] = "benevolo";
     }
 
-    // Imposta sempre il primo nodo della lista come nodo sorgente.
-    // Se non ci sono nodi, assegna una stringa vuota.
-    state.sourceNodeId = state.nodes[0]?.node_id || ""
+    state.sourceNodeId = state.nodes[0]?.node_id || "";
 
-    updateSummary(); //aggiorna le informazioni riepilogative della rete nell'interfaccia
-    renderNatureControls();//aggiorna le opzioni di start_short_simulation e consecutivamente il grafo
+    updateSummary();
+    renderNatureControls();
     initGraph();
 
-    //Aggiunge un evento al registro di log
-    addLog(`Topologia aggiornata: ${state.nodes.length} nodi, ${state.links.length} collegamenti.`);
+    addLog(
+      `Topologia aggiornata: ${state.nodes.length} nodi, ${state.links.length} collegamenti.`
+    );
   }
 
   $("sourceNode").addEventListener("change", () => {
@@ -647,20 +975,44 @@
     renderNatureControls();
     hideTooltip();
   });
+
   $("sourceNature").addEventListener("change", () => {
     if (!state.sourceNodeId) return;
+
     state.nodeNatures[state.sourceNodeId] = $("sourceNature").value;
     syncGraphNatures();
   });
-  $("fitGraph").addEventListener("click", () => state.cy?.fit(undefined, 35));
-  $("reLayout").addEventListener("click", () => {
-    if (state.cy) state.cy.layout({ name: "cose", animate: true, animationDuration: 350, padding: 35, nodeRepulsion: 6500, idealEdgeLength: 110 }).run();
-  });
-  $("clearLogs").addEventListener("click", () => { $("logList").innerHTML = '<div class="log-empty">Nessun evento registrato.</div>'; });
 
+  $("fitGraph").addEventListener("click", () => {
+    state.cy?.fit(undefined, 35);
+  });
+
+  $("reLayout").addEventListener("click", () => {
+    if (state.cy) {
+      state.cy.layout({
+        name: "cose",
+        animate: true,
+        animationDuration: 350,
+        padding: 35,
+        nodeRepulsion: 6500,
+        idealEdgeLength: 110
+      }).run();
+    }
+  });
+
+  $("clearLogs").addEventListener("click", () => {
+    $("logList").innerHTML =
+      '<div class="log-empty">Nessun evento registrato.</div>';
+  });
+
+  /* SHORT SIMULATION */
   $("shortStart").addEventListener("click", async () => {
     if (!state.sourceNodeId) {
-      feedback("shortFeedback", "Seleziona un nodo sorgente prima di avviare.", "error");
+      feedback(
+        "shortFeedback",
+        "Seleziona un nodo sorgente prima di avviare.",
+        "error"
+      );
       return;
     }
 
@@ -684,89 +1036,228 @@
     };
 
     $("shortStart").disabled = true;
+
     try {
-      const result = await socket.timeout(15000).emitWithAck("short_simulation", data);
+      const result = await socket.timeout(15000)
+        .emitWithAck("short_simulation", data);
+
       showCommandResult("shortFeedback", result, "Short Simulation");
+
       if (result?.ok) {
         state.hasStartedShort = true;
+
+        // Aggiorna l'interfaccia e blocca reasoningMode.
+        renderNatureControls();
+
         addLog(
           `Parametri short inviati: sorgente ${data.node_id}; ` +
           `${Object.keys(data.nodes_true_nature).length} nature configurate.`
         );
       }
+
     } catch (err) {
-      feedback("shortFeedback", "Nessuna risposta dal server entro 15 secondi. Verifica la connessione e il backend.", "error");
+      feedback(
+        "shortFeedback",
+        "Nessuna risposta dal server entro 15 secondi. Verifica la connessione e il backend.",
+        "error"
+      );
+
       addLog("Timeout o errore durante short_simulation.", "error");
+
     } finally {
       $("shortStart").disabled = !state.nodes.length;
     }
   });
 
+  /* RESET SHORT SIMULATION */
   $("shortReset").addEventListener("click", async () => {
     $("shortReset").disabled = true;
+
     try {
-      const result = await socket.timeout(15000).emitWithAck("reset_simulation");
+      const result = await socket.timeout(15000)
+        .emitWithAck("reset_simulation");
+
       showCommandResult("shortFeedback", result, "Reset");
+
       if (result?.ok) {
         state.hasStartedShort = false;
-        for (const node of state.nodes) state.nodeNatures[node.node_id] = "benevolo";
+
+        for (const node of state.nodes) {
+          state.nodeNatures[node.node_id] = "benevolo";
+        }
+
+        // Riabilita reasoningMode e i controlli delle nature.
         renderNatureControls();
+
         addLog("Nature dei nodi ripristinate a benevole dalla dashboard.");
       }
+
     } catch (err) {
-      feedback("shortFeedback", "Nessuna risposta al Reset. I valori locali non sono stati modificati.", "error");
+      feedback(
+        "shortFeedback",
+        "Nessuna risposta al Reset. I valori locali non sono stati modificati.",
+        "error"
+      );
+
       addLog("Timeout o errore durante reset_simulation.", "error");
+
     } finally {
       $("shortReset").disabled = false;
     }
   });
 
+  /* LONG SIMULATION - START */
   $("longStart").addEventListener("click", async () => {
     $("longStart").disabled = true;
+
     try {
-      const result = await socket.timeout(15000).emitWithAck("start_long_simulation");
+      const result = await socket.timeout(15000)
+        .emitWithAck("start_long_simulation");
+
       showCommandResult("longFeedback", result, "Long Simulation");
+
     } catch (err) {
-      feedback("longFeedback", "Nessuna risposta dal server entro 15 secondi.", "error");
+      feedback(
+        "longFeedback",
+        "Nessuna risposta dal server entro 15 secondi.",
+        "error"
+      );
+
       addLog("Timeout o errore durante start_long_simulation.", "error");
-    } finally { $("longStart").disabled = false; }
-  });
-  $("longStop").addEventListener("click", async () => {
-    $("longStop").disabled = true;
-    try {
-      const result = await socket.timeout(15000).emitWithAck("stop_long_simulation");
-      showCommandResult("longFeedback", result, "Stop Long Simulation");
-    } catch (err) {
-      feedback("longFeedback", "Nessuna risposta dal server entro 15 secondi.", "error");
-      addLog("Timeout o errore durante stop_long_simulation.", "error");
-    } finally { $("longStop").disabled = false; }
+
+    } finally {
+      $("longStart").disabled = false;
+    }
   });
 
+  /* LONG SIMULATION - STOP */
+  $("longStop").addEventListener("click", async () => {
+    $("longStop").disabled = true;
+
+    try {
+      const result = await socket.timeout(15000)
+        .emitWithAck("stop_long_simulation");
+
+      showCommandResult("longFeedback", result, "Stop Long Simulation");
+
+    } catch (err) {
+      feedback(
+        "longFeedback",
+        "Nessuna risposta dal server entro 15 secondi.",
+        "error"
+      );
+
+      addLog("Timeout o errore durante stop_long_simulation.", "error");
+
+    } finally {
+      $("longStop").disabled = false;
+    }
+  });
+
+  /* DATASET GENERATION - START */
+  $("datasetStart").addEventListener("click", async () => {
+    $("datasetStart").disabled = true;
+
+    try {
+      const result = await socket.timeout(15000)
+        .emitWithAck("start_dataset_generation");
+
+      showCommandResult(
+        "datasetFeedback",
+        result,
+        "Dataset Generation"
+      );
+
+    } catch (err) {
+      feedback(
+        "datasetFeedback",
+        "Nessuna risposta dal server entro 15 secondi.",
+        "error"
+      );
+
+      addLog(
+        "Timeout o errore durante start_dataset_generation.",
+        "error"
+      );
+
+    } finally {
+      $("datasetStart").disabled = false;
+    }
+  });
+
+  /* DATASET GENERATION - STOP */
+  $("datasetStop").addEventListener("click", async () => {
+    $("datasetStop").disabled = true;
+
+    try {
+      const result = await socket.timeout(15000)
+        .emitWithAck("stop_dataset_generation");
+
+      showCommandResult(
+        "datasetFeedback",
+        result,
+        "Stop Dataset Generation"
+      );
+
+    } catch (err) {
+      feedback(
+        "datasetFeedback",
+        "Nessuna risposta dal server entro 15 secondi.",
+        "error"
+      );
+
+      addLog(
+        "Timeout o errore durante stop_dataset_generation.",
+        "error"
+      );
+
+    } finally {
+      $("datasetStop").disabled = false;
+    }
+  });
+
+  /* SOCKET.IO EVENTS */
   socket.on("connect", () => {
     $("connectionStatus").className = "connection online";
     $("connectionText").textContent = "Socket.IO connesso";
+
     addLog("Connessione Socket.IO stabilita.");
   });
+
   socket.on("disconnect", reason => {
     $("connectionStatus").className = "connection offline";
     $("connectionText").textContent = "Disconnesso";
+
     addLog(`Connessione Socket.IO interrotta: ${reason}`, "error");
   });
+
   socket.on("connect_error", err => {
     $("connectionStatus").className = "connection offline";
     $("connectionText").textContent = "Errore di connessione";
-    addLog(`Errore Socket.IO: ${err.message || "connessione non riuscita"}`, "error");
+
+    addLog(
+      `Errore Socket.IO: ${err.message || "connessione non riuscita"}`,
+      "error"
+    );
   });
 
   socket.on("topology_updated", data => {
-    try { applyTopology(data); }
-    catch (err) {
-      feedback("shortFeedback", `Topologia non valida: ${err.message}`, "error");
+    try {
+      applyTopology(data);
+
+    } catch (err) {
+      feedback(
+        "shortFeedback",
+        `Topologia non valida: ${err.message}`,
+        "error"
+      );
+
       addLog(`Errore nella topologia: ${err.message}`, "error");
     }
   });
 
   addLog("Dashboard inizializzata. In attesa di topology_updated.");
+
 })();
 </script>
 </body>

@@ -2,4 +2,5 @@ models/
 data/
 .env/
 __pycache__/
+llama.cpp/
 *.pyc

@@ -16,11 +16,11 @@ from core.operation_coordinator import (
     request_reload,
     request_start_simulation,
     request_reset_simulation,
-    stop_long_simulation
+    request_stop_long_simulation
 )
 
 from core.config_watcher import start_config_watcher
-from core.simulation.simulation_runner import run_long_simulation, run_short_simulation
+from core.simulation.simulation_runner import run_long_simulation, run_short_simulation, run_dataset_generation
 
 logging.basicConfig(
     level=logging.INFO,
@@ -140,7 +140,7 @@ def handle_start_long_simulation():
 
     ok, message = request_start_simulation(
         socketio=socketio,
-        operation_kind="long",
+        operation_kind="long_simulation",
         simulation_function=run_long_simulation,
         supports_stop=True,
     )
@@ -162,7 +162,50 @@ def handle_stop_long_simulation():
 
     logger.info("Richiesta di stop di una simulazione lunga ricevuta.")
 
-    ok, message = stop_long_simulation(socketio)
+    ok, message = request_stop_long_simulation(socketio, operation_kind = "long_simulation")
+
+    return {
+        "ok": ok,
+        "message": message,
+    }
+
+@socketio.on("start_dataset_generation")
+def handle_start_dataset_generation():
+    """Gestisce la richiesta Socket.IO di avvio di generazione del dataset.
+
+    Returns:
+        dict: Dizionario contenente:
+            - ok (bool): Indica se l'operazione è stata avviata.
+            - message (str): Messaggio descrittivo dell'esito.
+    """
+
+    logger.info("Richiesta di avvio di generazione del dataset ricevuta.")
+
+    ok, message = request_start_simulation(
+        socketio=socketio,
+        operation_kind="dataset_generation",
+        simulation_function=run_dataset_generation,
+        supports_stop=True,
+    )
+
+    return {
+        "ok": ok,
+        "message": message,
+    }
+
+@socketio.on("stop_dataset_generation")
+def handle_stop_dataset_generation():
+    """Gestisce la richiesta Socket.IO di stop della generazione del dataset.
+
+    Returns:
+        dict: Dizionario contenente:
+            - ok (bool): Indica se la richiesta di stop è stata inviata.
+            - message (str): Messaggio descrittivo dell'esito.
+    """
+
+    logger.info("Richiesta di stop della generazione del dataset ricevuta.")
+    
+    ok, message = request_stop_long_simulation(socketio, operation_kind = "dataset_generation")
 
     return {
         "ok": ok,

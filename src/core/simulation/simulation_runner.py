@@ -1,6 +1,8 @@
 
 import threading
 import requests
+import os
+import json
 import random
 from core.simulation.slm_handler import get_SLM_name, generate_network_scenario, generate_insight, evaluate_insight
 from core.simulation.local_knowledge_handler import init_local_knowledge, vectorize, search, add_knowledge
@@ -9,6 +11,7 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from copy import deepcopy
 import time
+from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,6 +39,11 @@ _insight_evaluation_server= None
 
 _audit_server= None
 """Nome del server che usa l'audit"""
+
+BASE_DIR = Path(__file__).resolve().parents[3]
+TRAINING_OUTPUT_DIR = BASE_DIR / "data" / "output" / "training"
+PURE_DATASET= TRAINING_OUTPUT_DIR / "pure_dataset"
+"""path al file contenente i dati puri di training  """
 
 def _init_reasoning_mode(mode):
     """
@@ -292,7 +300,7 @@ def _malicious_node_reasoning(network_description, scenario, manipulated_paramet
         network_description=network_description, 
         data=scenario,
         manipulated_parameters=manipulated_parameters,
-        goal_description=None,
+        goal_description="Congestionare la rete",
         model_name=_insight_generation_server
     )
 
@@ -375,13 +383,14 @@ def _insight_evaluation(node_id, data):
         "Nodo %s: avvio valutazione insight generata dal nodo %s.",
         node_id, data["source_id"]
     )
-
+    node_true_nature= get_node_true_nature(node_id)
     insight = data["insight"]
     goal_id = data["goal_id"]
     scenario = data["scenario"]
     simulation_parameters= data["simulation_parameters"]
     k=data["k"]
     max_distance=data["max_distance"]
+    
 
     #PRIMO CONTROLLO
     # Controlla che ogni parametro manipolabili valorizzato dall'insight, 
@@ -398,12 +407,21 @@ def _insight_evaluation(node_id, data):
 
         # Interrompe immediatamente se un parametro  è fuori intervallo.
         if value < min_value or value > max_value:
-            logger.info(
-                "Nodo %s:   INSIGHT RIFIUTATA, parametro '%s' fuori dai limiti consentiti "
-                "[%s, %s], valore proposto: %s.",
-                node_id, parameter_name, min_value, max_value, value
-            )
-            return False
+            if node_true_nature=="benevolo":
+                logger.info(
+                    "Nodo %s:   INSIGHT RIFIUTATA, parametro '%s' fuori dai limiti consentiti "
+                    "[%s, %s], valore proposto: %s.",
+                    node_id, parameter_name, min_value, max_value, value
+                )
+                return False
+            else:
+                logger.info(
+                    "Nodo %s:   INSIGHT APPROVATA, NODO MALEVOLO, parametro '%s' fuori dai limiti consentiti "
+                    "[%s, %s], valore proposto: %s.",
+                    node_id, parameter_name, min_value, max_value, value
+                )
+                return False
+
 
     #SECONDO CONTROLLO
     node_knowledge = next(
@@ -432,7 +450,7 @@ def _insight_evaluation(node_id, data):
                 comparison_insight= goal_specific_knowledge["data"][index]["action"].copy()
                 
                 logger.info(
-                    "Nodo %s: INSIGHT APPROVATA: trovata una corrispondenza esatta nella conoscenza locale.",
+                    "Nodo %s: trovata una corrispondenza esatta nella conoscenza locale.",
                     node_id
                 )
         
@@ -485,11 +503,20 @@ def _insight_evaluation(node_id, data):
                     break
 
             if all_within_delta:
-                logger.info(
-                    "Nodo %s: INSIGHT APPROVATA tramite confronto con la conoscenza locale.",
-                    node_id
-                )
-                return True
+                if node_true_nature=="benevolo":
+                    logger.info(
+                        "Nodo %s: INSIGHT APPROVATA tramite confronto con la conoscenza locale.",
+                        node_id
+                    )
+                    return True
+                else:
+                    logger.info(
+                        "Nodo %s: INSIGHT RIFIUTATA: NODO MALEVOLO, tramite confronto con la conoscenza locale.",
+                        node_id
+                    ) 
+
+                    return False
+            
 
     #TERZO CONTROLLO
     #Infine il node agent prova ad affidarsi all'SLM
@@ -512,6 +539,12 @@ def _insight_evaluation(node_id, data):
         insight=insight,
         model_name=_insight_evaluation_server,
     )
+    if node_true_nature=="malevolo":
+        evaluation= not evaluation
+        logger.info(
+            "Nodo %s: MALEVOLO, valutazione SLM completata. Esito: %s.",
+            node_id, evaluation
+        )
 
     logger.info(
         "Nodo %s: valutazione SLM completata. Esito: %s.",
@@ -665,10 +698,11 @@ def run_short_simulation(configuration, data):
              - node_id (str): Identificativo del nodo coinvolto nella simulazione. Deve esistere in configuration
              - node_nature (str): Natura del nodo. Valori ammessi: "benevolo" o "malevolo"
              - nodes_true_nature (dict): dizionario che associa ad ogni nodo della topologia la sua reale natura. Valori ammessi per ogni nodo: "benevolo" o "malevolo"
+             -reasoning_mode (str): tipologia di ragionamento desiderato. Valori ammessi "dumb" "medium"
             
         Any: Risultato della simulazione.
     """
-    global _local_knowledge, _adjacency, _audit_state
+    global _local_knowledge, _adjacency, _audit_state, _reasoning_node
 
     if _local_knowledge is None or _adjacency is None or _audit_state == False or _reasoning_mode is None:
         _setup_simulation(configuration, data["nodes_true_nature"], data["reasoning_mode"])
@@ -867,16 +901,15 @@ def run_long_simulation(configuration, stop_event: threading.Event):
         Any: Risultato della simulazione.
     """
 
-    logger.info("Avvio simulazione lunga.")
-
-    # Inserire qui la logica della simulazione lunga.
+    logger.info("Avvio generazione dataset.")
 
     result = None
 
     while not stop_event.is_set():
         # Esegue un passo della simulazione.
-        logger.info("Esecuzione di un nuovo passo della simulazione lunga.")
-        # Aggiornare eventualmente result.
+        logger.info("Esecuzione di un nuovo passo della generazione del dataset.")
+        
+
 
         # Esempio:
         # result = ...
@@ -886,3 +919,134 @@ def run_long_simulation(configuration, stop_event: threading.Event):
 
     logger.info("Simulazione lunga terminata.")
     return result
+
+def save_dataset(dataset, filename):
+    """Salva il dataset in un file JSON, aggiungendo i nuovi esempi
+    a quelli eventualmente già presenti.
+
+    Se le directory che compongono filename non esistono, le crea.
+    Se il file non esiste, lo crea
+
+    Args:
+        dataset (list): Dataset contenente gli esempi da salvare.
+        filename (str): Percorso e nome del file JSON di destinazione.
+
+    Returns:
+        None
+
+    """
+    #Crea tutte le directory mancanti che compongono filename se non esistono già
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    
+
+    if os.path.exists(filename)and os.path.getsize(filename) > 0:
+        #se filename esiste già e non è vuoto, apre il file in lettura e ne carica il contenuto
+        with open(filename, "r", encoding="utf-8") as file:
+            existing_dataset = json.load(file)
+    else:
+        existing_dataset = []
+
+    #aggiunge tutti gli elementi contenuti in dataset alla fine di existing_dataset
+    existing_dataset.extend(dataset)    
+
+    #apre filename in scrittura (se il file non esiste, lo crea)
+    #e ne sovrascrive il contenuto con il nuovo dataset
+    with open(filename, "w", encoding="utf-8") as file:
+        json.dump(existing_dataset, file, indent=4, ensure_ascii=False)
+
+
+def run_dataset_generation(configuration, stop_event: threading.Event):
+    """Esegue una simulazione lunga con supporto all'arresto.
+
+    Args:
+        configuration (dict): Configurazione utilizzata dalla simulazione.
+        stop_event (threading.Event): Evento utilizzato per richiedere
+            l'interruzione della simulazione.
+
+    Returns:
+        None
+        
+    """
+
+    logger.info("Avvio generazione dataset.")
+
+    dataset=[]
+
+    mode="medium"
+    _init_reasoning_mode(mode)
+
+    network_description=configuration["topology"]["network_description"]
+    manipulated_parameters=configuration["simulation_parameters"]["manipulated_parameters"]
+
+    while not stop_event.is_set():
+        try: 
+            # Esegue un passo della simulazione.
+            logger.info("Esecuzione di un nuovo passo della generazione del dataset.")
+
+            #Genera uno scenario critico in cui deve operare il nodo selezionato
+            scenario= generate_network_scenario(
+                configuration["simulation_parameters"]["measured_parameters"],
+                configuration["topology"]["network_description"],
+                model_name=_scenario_generation_server
+            )
+
+            #Selezione un random goal tra i goal della rete e ne estrae la descrizione
+            selected_goal = random.choice(configuration["topology"]["network_goals"])
+            goal_desc = selected_goal["description"]
+            
+
+
+            insight= generate_insight(
+                kind="malevolo",
+                network_description=network_description, 
+                data=scenario,
+                manipulated_parameters=manipulated_parameters,
+                goal_description="Congestionare la rete",
+                model_name=_insight_generation_server
+            )
+
+            data= {
+                "kind":"malevolo",
+                "goal":"Congestionare la rete",
+                "scenario": scenario["scenario_description"],
+                "measured_parameters":scenario["measured_parameters"],
+                "manipulated_parameters":insight["manipulated_parameters"],
+                "behavior":insight["behavior"],
+                "confidence":insight["confidence"]
+            }
+
+            dataset.append(data)
+
+
+            insight= generate_insight(
+                kind="benevolo",
+                network_description=network_description, 
+                data=scenario,
+                manipulated_parameters=manipulated_parameters,
+                goal_description=goal_desc,
+                model_name=_insight_generation_server
+            )
+
+            data= {
+                "kind":"benevolo",
+                "goal":goal_desc,
+                "scenario": scenario["scenario_description"],
+                "measured_parameters":scenario["measured_parameters"],
+                "manipulated_parameters":insight["manipulated_parameters"],
+                "behavior":insight["behavior"],
+                "confidence":insight["confidence"]
+            }
+
+            dataset.append(data)
+
+        except Exception as exc:
+                logger.warning(
+                    f"Eccezione sollevata e ignorata: {exc}",
+                    exc_info=True
+                )
+                continue
+
+        save_dataset(dataset,PURE_DATASET)
+
+    logger.info("Generazione dataset terminata.")
+    

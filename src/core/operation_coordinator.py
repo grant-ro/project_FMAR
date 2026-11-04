@@ -27,8 +27,9 @@ _reloading = False  #stato di attivazione del ciclo di reload
 _active_configuration = None #configurazione attualmente usata dall'applicazione
 
 _operation_active = False #stato di attivazione di una qualunque operazione di simulazione
-_operation_kind = None
-_stop_event = None
+_operation_kind = None #tipo di operazione di simulazione in esecuzione. Può assumere i seguenti valori "short_simulation" "long_simulation" "dataset_generation" "reset"
+_stop_event_long_simulation = None
+_stop_event_dataset_generation = None
 
 
 
@@ -139,6 +140,11 @@ def _finish_operation(socketio, result=None, error=None):
     global _stop_event
 
     with _state_lock:
+        logger.info(
+            "Simulazione %s terminata.",
+            _operation_kind,
+        )
+
         #riporta il coordinatore a uno stato coerente alla terminazione dell'operazione
         _operation_active = False 
         _operation_kind = None
@@ -150,9 +156,16 @@ def _finish_operation(socketio, result=None, error=None):
             "operation_error",
             {"message": str(error)},
         )
+
+        logger.warning(
+            "Simulazione terminata con errore."
+        )
+
     else:
         #comunica al client la terminazione con successo dell'operazione
         socketio.emit("operation_finished", result or {})
+
+        
 
     _apply_pending_reload() #esegue, se ci sono, richieste di reload effettuate durante l'esecuzione dell'operazione 
 
@@ -296,12 +309,14 @@ def request_reset_simulation(socketio):
 
     return True, "Reset della simulazione avviato."
 
-def stop_long_simulation(socketio):
+def request_stop_long_simulation(socketio, operation_kind):
     """Richiede lo stop, senza dichiarare prematuramente la fine.
     
-    socketio:
+    Args:
+        socketio:
             Istanza Socket.IO utilizzata per inviare notifiche
             ai client e avviare un'attività in background.
+        operation_kind: stringa che specifica il tipo di operazione lunga da interrompere
 
     Returns:
         tuple[bool, str]: Una tupla contenente:
@@ -313,17 +328,18 @@ def stop_long_simulation(socketio):
     with _state_lock:
         if (
             not _operation_active       #Se non c'è nessuna operazione attiva correntemente, la richiesta di stop operazione fallisce
-            or _operation_kind != "long"    #se vi è un'op correntemente attiva, ma questa non è una simulazione lunaga, la richiesta di stop op fallisce
+            or operation_kind != _operation_kind    #se vi è un'op correntemente attiva, ma questa è  diversa da quella di cui si è richiesta l'interruzione, la richiesta di stop op fallisce
         ):
-            return False, "Non c'è un'operazione lunga attiva."
+            return False, f"Non c'è un'operazione di tipo {operation_kind} attiva."
 
+        
         stop_event = _stop_event
 
     stop_event.set()
 
     socketio.emit(
         "operation_stop_requested",
-        {"operation": "long"},
+        {"operation": f"{operation_kind}"},
     )
 
     return True, "Richiesta di stop inviata."
