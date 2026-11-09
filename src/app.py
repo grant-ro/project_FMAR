@@ -77,6 +77,18 @@ def handle_connect(auth=None):
         configuration["topology"],
     )
 
+@socketio.on("disconnect")
+def handle_disconnect(reason=None):
+    """Gestisce la sconnessione di un client Socket.IO.
+    Args:
+        reason: motivo della sconnessione
+    
+    Returns:
+        None
+    """
+    
+    logger.info("Client Socket.IO disconnesso.")
+
   
 
 @socketio.on("short_simulation")

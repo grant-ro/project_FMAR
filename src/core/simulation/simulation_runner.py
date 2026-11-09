@@ -5,7 +5,8 @@ import os
 import json
 import random
 from core.simulation.slm_handler import get_SLM_name, generate_network_scenario, generate_insight, evaluate_insight
-from core.simulation.local_knowledge_handler import init_local_knowledge, vectorize, search, add_knowledge
+from core.simulation.local_knowledge_handler import init_local_knowledge, search_lk, add_knowledge
+from core.simulation.dlt_handler import init_dlt, search_dlt, add_record, reset_dlt, is_dlt_setup
 from core.simulation.audit import init_audit, get_node_known_nature, get_node_true_nature, audit_reasoning, audit_trust_evaluation
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -68,10 +69,16 @@ def _init_reasoning_mode(mode):
             _insight_evaluation_server =  get_SLM_name("llama-3.2-1b")
             _audit_server= get_SLM_name("llama-3.2-1b")
 
-        case "medium":
+        case "smart":
             _scenario_generation_server = get_SLM_name("qwen-rete")
             _insight_generation_server = get_SLM_name("qwen-rete")
             _insight_evaluation_server = get_SLM_name("qwen-rete")
+            _audit_server= get_SLM_name("qwen-rete")
+
+        case "traffic":
+            _scenario_generation_server = get_SLM_name("qwen-rete")
+            _insight_generation_server = get_SLM_name("llama-traffic")
+            _insight_evaluation_server = get_SLM_name("llama-traffic")
             _audit_server= get_SLM_name("qwen-rete")
 
         case _:
@@ -148,6 +155,7 @@ def _setup_simulation(configuration, nodes_true_nature, reasoning_mode):
     init_audit(audit_parameters=configuration["analysis_parameters"]["audit_parameters"], nodes_true_nature= nodes_true_nature)
     _init_reasoning_mode(reasoning_mode)
     _audit_state=True
+    init_dlt()
 
     logger.info("Simulazione inizializzata.")
 
@@ -171,8 +179,88 @@ def reset_simulation():
     _adjacency = None
     _audit_state= False
     _reasoning_mode= None
+    reset_DLT()
 
     logger.info("Stato interno della simulazione resettato.")
+
+def _calculate_insight(results, knowledge, node_id="nodo sorgente"):
+    """
+    Calcola un insight a partire dalle azioni associate ai casi
+    simili individuati nella conoscenza locale.
+
+    Se viene trovata una corrispondenza esatta, restituisce
+    direttamente l'azione associata al record corrispondente.
+
+    In caso contrario, calcola una media pesata delle azioni
+    dei casi simili, attribuendo a ciascuno un'importanza
+     inversamente proporzionale alla loro distanza.
+
+    Args:
+        results (list[dict]): risultati della ricerca di similarità.
+            Ogni elemento contiene:
+                - index (int): indice del record nella conoscenza.
+                - distance (float): distanza dalla query.
+
+        knowledge (dict): base di conoscenza contenente i record
+            e le relative azioni, accessibili tramite knowledge["data"].
+
+        node_id (str, optional): identificativo del nodo associato
+            alla ricerca.
+
+    Returns:
+        dict: insight calcolata, contenente i parametri dell'azione
+            e i rispettivi valori.
+
+        None: se non sono disponibili risultati.
+    """
+
+    if not results:
+        logger.warning(
+            "Nodo %s: nessun risultato disponibile per il calcolo dell'insight.",
+            node_id
+        )
+        return None
+
+    if results[0]["distance"] == 0:
+
+        index = results[0]["index"]
+        insight = knowledge["data"][index]["action"].copy()
+        logger.info(
+            "Nodo %s: trovata una corrispondenza esatta nella conoscenza locale.",
+            node_id
+        )
+
+        return insight
+
+    weighted_values = {}
+    total_weight = 0.0
+
+    for result in results:
+        index = result["index"]
+        distance = result["distance"]
+
+        action = knowledge["data"][index]["action"]
+        weight = 1.0 / distance
+        total_weight += weight
+
+        for param, value in action.items():
+            weighted_values[param] = (
+                weighted_values.get(param, 0.0) + weight * value
+            )
+
+    insight = {
+        param: value / total_weight
+        for param, value in weighted_values.items()
+    }
+
+    logger.info(
+        "Nodo %s: %sinsight calcolata tramite media pesata di %d casi simili.",
+        node_id,
+        "comparison " if node_id == "nodo sorgente" else "",
+        len(results)
+    )
+
+    return insight
 
 def _benevolent_node_reasoning(local_knowledge,network_description, scenario, goal_description, simulation_parameters, k, max_distance ):
     """Genera l'insight  di un nodo benevolo della rete.
@@ -213,60 +301,48 @@ def _benevolent_node_reasoning(local_knowledge,network_description, scenario, go
             "Nodo sorgente: valutazione basata sulla conoscenza locale.",
         )
 
-    vectorized_scenario=vectorize(scenario["measured_parameters"],simulation_parameters["measured_parameters"])
-    results= search(query=vectorized_scenario, k=k, max_distance=max_distance, search_space=local_knowledge["context_vectors"])    
+    results= search_lk(query=scenario["measured_parameters"], k=k, max_distance=max_distance, search_space=local_knowledge, param_configuration=simulation_parameters["measured_parameters"])    
     if results:
         flag=False
         #Calcola l'insight a partire dalle action effettuate nelle situazioni simili in passato
-        if results[0]["distance"] == 0:
-            index = results[0]["index"]
-            insight= local_knowledge["data"][index]["action"].copy()
-            
-            logger.info(
-                "Trovata una corrispondenza esatta nella conoscenza locale."
-            )
+        insight = _calculate_insight(
+            results,
+            local_knowledge
+        ) 
+    else:
+
+        #Cerca di generare l'insight nel contesto dello scenario corrente
+        # affidandosi alla conoscenza contenuta nel DLT 
+
+        #Cerca nel DLT situazioni affrontate in passato con un 
+        #contesto sufficientemente simile
+        logger.info(
+            "Nodo sorgente: valutazione basata sul DLT.",
+        )
+        results= search_dlt(query=scenario["measured_parameters"], k=k, max_distance=max_distance, param_configuration=simulation_parameters["measured_parameters"]) 
+        if results:
+            flag=False
+            #Calcola l'insight a partire dalle action effettuate nelle situazioni simili in passato
+            insight = _calculate_insight(
+                results,
+                local_knowledge
+            )  
 
         else:
-            weighted_values = {}
-            total_weight = 0.0
-
-            for result in results:
-                index = result["index"]
-                distance = result["distance"]
-
-                action = local_knowledge["data"][index]["action"]
-                weight = 1.0 / distance 
-                total_weight += weight
-
-                for param, value in action.items():
-                    weighted_values[param] = (
-                        weighted_values.get(param, 0.0) + weight * value
-                    )
-            insight = {
-                param: value / total_weight
-                for param, value in weighted_values.items()
-            }
-
+            #Genera l'insight di natura benevola nel contesto dello scenario corrente 
+            #affidandosi a un SLM
             logger.info(
-                "Insight calcolata tramite media pesata di %d casi simili.",
-            len(results)
+                "Nessun caso simile trovato: generazione insight tramite SLM."
             )
-       
-    else:
-        #Genera l'insight di natura benevola nel contesto dello scenario corrente 
-        #affidandosi a un SLM
-        logger.info(
-            "Nessun caso simile trovato: generazione insight tramite SLM."
-        )
 
-        insight= generate_insight(
-            kind="benevolo",
-            network_description=network_description, 
-            data=scenario,
-            manipulated_parameters=simulation_parameters["manipulated_parameters"],
-            goal_description=goal_description,
-            model_name=_insight_generation_server
-        )
+            insight= generate_insight(
+                kind="benevolo",
+                network_description=network_description, 
+                data=scenario,
+                manipulated_parameters=simulation_parameters["manipulated_parameters"],
+                goal_description=goal_description,
+                model_name=_insight_generation_server
+            )
 
     return {
         "flag": flag,
@@ -441,39 +517,14 @@ def _insight_evaluation(node_id, data):
             node_id, data["goal_id"]
         )
 
-        vectorized_scenario=vectorize(scenario["measured_parameters"],simulation_parameters["measured_parameters"])
-        results= search(query=vectorized_scenario, k=k, max_distance=max_distance, search_space=goal_specific_knowledge["context_vectors"]) 
+        results= search_lk(query=scenario["measured_parameters"], k=k, max_distance=max_distance, search_space=goal_specific_knowledge["context_vectors"], param_configuration=simulation_parameters["measured_parameters"]) 
         if results:
             #Calcola l'insight a partire dalle action effettuate nelle situazioni simili in passato
-            if results[0]["distance"] == 0:
-                index = results[0]["index"]
-                comparison_insight= goal_specific_knowledge["data"][index]["action"].copy()
-                
-                logger.info(
-                    "Nodo %s: trovata una corrispondenza esatta nella conoscenza locale.",
-                    node_id
-                )
-        
-            else:
-                weighted_values = {}
-                total_weight = 0.0
-
-                for result in results:
-                    index = result["index"]
-                    distance = result["distance"]
-
-                    action = goal_specific_knowledge["data"][index]["action"]
-                    weight = 1.0 / distance 
-                    total_weight += weight
-
-                    for param, value in action.items():
-                        weighted_values[param] = (
-                            weighted_values.get(param, 0.0) + weight * value
-                        )
-                comparison_insight = {
-                    param: value / total_weight
-                    for param, value in weighted_values.items()
-                }
+            comparison_insight = _calculate_insight(
+                results,
+                goal_specific_knowledge,
+                node_id
+            )
 
             #Se l'insight calcolata è abbastanza simile a quella da valutare
             # la valutazione termina in modo positivo, altrimenti l'analisi continua
@@ -704,7 +755,7 @@ def run_short_simulation(configuration, data):
     """
     global _local_knowledge, _adjacency, _audit_state, _reasoning_node
 
-    if _local_knowledge is None or _adjacency is None or _audit_state == False or _reasoning_mode is None:
+    if _local_knowledge is None or _adjacency is None or _audit_state == False or _reasoning_mode is None or is_dlt_setup==False:
         _setup_simulation(configuration, data["nodes_true_nature"], data["reasoning_mode"])
     
     logger.info(
@@ -807,6 +858,7 @@ def run_short_simulation(configuration, data):
         }
         results, errors, majority= _distribute_and_wait(adjacency=_adjacency, source_id=data["node_id"],goal_id=selected_goal, topology=configuration["topology"]["nodes"], k=configuration["analysis_parameters"]["TTL"], data=node_agent_data , worker=_insight_evaluation)
         simulation_end_time=time.perf_counter()  #istante immediatamente successivo al quorum
+        insight=insight["insight"]
 
         # se nessun altro nodo è raggiungibile in questo momento o non è stata raggiunta una maggioranza dei voti tra i nodi raggiungibili
         # si lascia produrre l'insight all'audit
@@ -850,18 +902,6 @@ def run_short_simulation(configuration, data):
             
             audit_trust_evaluation(results=results,majority=majority,node_id=data["node_id"])
             if majority is True:
-                new_data = {
-                    "action": insight["insight"]["manipulated_parameters"],
-                    "context":scenario["measured_parameters"]
-                }
-                logger.info(
-                    "Nodo %s: maggioranza positiva; aggiornamento della conoscenza locale "
-                    "per il goal %s.",
-                    data["node_id"], selected_goal
-                )
-
-                add_knowledge(local_knowledge=goal_specific_knowledge, new_data=new_data, data_configuration=configuration["simulation_parameters"])
-                
                 if data["node_nature"] == "benevolo":
                     logger.info(
                         "ESITO_SIMULAZIONE: SUCCESSO, insight del nodo benevolo approvata ."
@@ -879,6 +919,39 @@ def run_short_simulation(configuration, data):
                     logger.info(
                         "ESITO_SIMULAZIONE: SUCCESSO, insight del nodo malevolo rifiutata."
                     )
+
+        if majority is not False:
+            new_data_lk = {
+                "action": insight["manipulated_parameters"],
+                "context":scenario["measured_parameters"]
+                }
+
+            logger.info(
+                "Nodo %s: maggioranza positiva; aggiornamento della conoscenza locale "
+                "per il goal %s.",
+                data["node_id"], selected_goal
+            )
+
+            add_knowledge(local_knowledge=goal_specific_knowledge, new_data=new_data_lk, data_configuration=configuration["simulation_parameters"]["measured_parameters"])
+
+            new_data_dlt={
+                "node_id":data["node_id"],
+                "goal_id":selected_goal,
+                "context": {
+                    "scenario":scenario["scenario_description"],
+                    "measured_parameters":scenario["measured_parameters"]
+                    },
+                "action":{
+                    "manipulated_parameters":insight["manipulated_parameters"],
+                    "behavior":insight["behavior"],
+                    "confidence":insight["confidence"]
+                    }
+            }
+
+            logger.info(
+                "Aggiornamento del dlt "
+            )
+            add_record(new_record=new_data_dlt,param_configuration=configuration["simulation_parameters"]["measured_parameters"])
 
     total_time =simulation_end_time- simulation_start_time
     logger.info(
@@ -972,7 +1045,7 @@ def run_dataset_generation(configuration, stop_event: threading.Event):
 
     dataset=[]
 
-    mode="medium"
+    mode="smart"
     _init_reasoning_mode(mode)
 
     network_description=configuration["topology"]["network_description"]
@@ -1008,6 +1081,7 @@ def run_dataset_generation(configuration, stop_event: threading.Event):
             data= {
                 "kind":"malevolo",
                 "goal":"Congestionare la rete",
+                "goal_id":selected_goal["id"],
                 "scenario": scenario["scenario_description"],
                 "measured_parameters":scenario["measured_parameters"],
                 "manipulated_parameters":insight["manipulated_parameters"],
@@ -1030,6 +1104,7 @@ def run_dataset_generation(configuration, stop_event: threading.Event):
             data= {
                 "kind":"benevolo",
                 "goal":goal_desc,
+                "goal_id":selected_goal["id"],
                 "scenario": scenario["scenario_description"],
                 "measured_parameters":scenario["measured_parameters"],
                 "manipulated_parameters":insight["manipulated_parameters"],
@@ -1049,4 +1124,5 @@ def run_dataset_generation(configuration, stop_event: threading.Event):
         save_dataset(dataset,PURE_DATASET)
 
     logger.info("Generazione dataset terminata.")
+    logger.info(f"Numero di elementi nel dataset: {len(dataset)}")
     

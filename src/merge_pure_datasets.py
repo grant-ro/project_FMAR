@@ -8,12 +8,12 @@ TRAINING_INPUT_DIR = BASE_DIR / "data" / "input" / "training" / "merge"
 TRAINING_OUTPUT_DIR = BASE_DIR / "data" / "output" / "training" /"merge"
   
 PURE_DATASET= TRAINING_INPUT_DIR / "pure_dataset"
-PURE_DATASET_MERGED=TRAINING_OUTPUT_DIR / "pure_dataset_merged"
+PURE_DATASET_MERGED=TRAINING_OUTPUT_DIR / "pure_dataset_merged.json"
 
 def merge_dataset():
     # Carica il dataset principale
     if PURE_DATASET.exists() and os.path.getsize(PURE_DATASET) > 0:
-        with open(PURE_DATASET, "r", encoding="utf-8") as f:
+        with open(file_path, "r", encoding="utf-8-sig") as f:
             dataset_finale = json.load(f)
     else:
         dataset_finale = []
@@ -28,7 +28,7 @@ def merge_dataset():
         print(f"Lettura: {file_json.name}")
 
         try:
-            with open(file_json, "r", encoding="utf-8") as f:
+            with open(file_json, "r", encoding="utf-8-sig") as f:
                 dati = json.load(f)
 
             # Aggiunge i dati al dataset principale
@@ -41,7 +41,7 @@ def merge_dataset():
             print(f"Errore nel file {file_json.name}: {e}")
 
     # Salva il dataset aggiornato
-    with open(PURE_DATASET_MERGED, "w", encoding="utf-8") as f:
+    with open(PURE_DATASET_MERGED, "w", encoding="utf-8-sig") as f:
         json.dump(
             dataset_finale,
             f,

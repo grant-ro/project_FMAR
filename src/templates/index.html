@@ -1,19 +1,23 @@
 
 <!DOCTYPE html>
 <html lang="it">
+<!-- Contiene tutto il documento-->
 <head>
+<!-- Contiene informazioni e impostazioni della pagina-->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- il titolo che compare nella scheda del browser -->
   <title>Network Simulation Dashboard</title>
 
-  <!-- Librerie client: non è necessario un processo di build. -->
+  <!-- Librerie javscript esterne -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
 
   <style>
     :root {
-      color-scheme: dark;
-      --bg: #090e18;
+    /*seleziona l'elemento html e definisce delle variabili globali*/
+      color-scheme: dark; /* Comunica al browser che la pagina utilizza un tema scuro. */
+      --bg: #090e18;    /* Colore di sfondo principale. */
       --panel: #111927;
       --panel-2: #151f30;
       --border: #263349;
@@ -31,64 +35,113 @@
     * { box-sizing: border-box; }
 
     body {
-      margin: 0;
-      min-height: 100vh;
-      color: var(--text);
-      background:
+    /*seleziona l'elemento body e ne definisce le proprietà CSS*/
+      margin: 0; /* Elimina i margini predefiniti del browser. */
+      min-height: 100vh; /* Imposta un'altezza minima pari all'intera altezza della finestra. */
+      color: var(--text); /* Imposta il colore del testo*/
+      background:         /* Imposta il colore del background*/
         radial-gradient(ellipse at 10% 0%, rgba(37, 99, 235, .12), transparent 35%),
+        /*Primo effetto luminoso radiale blu, nella zona superiore sinistra.*/
         radial-gradient(ellipse at 100% 20%, rgba(99, 102, 241, .08), transparent 30%),
+        /* Secondo effetto luminoso radiale viola, nella zona superiore destra. */
         var(--bg);
+        /*imposta il colore di base*/
     }
 
     button, input, select { font: inherit; }
+    /*tutti i gli elementi di tipo pulsante, campo di input e menu a tendina ereditano lo stile del proprio elemento genitore*/
 
     button, select {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
+    /*seleziona tutti gli elementi di tipo pulsante e menu a tendina*/
+      border: 1px solid var(--border); /*imposta un bordo di 1px */
+      border-radius: 10px;  /*imposta un bordo arrotondato agli angoli*/
+      color: var(--text);   /*imposta il colore del testo*/
       background: #192438;
-      padding: 10px 12px;
+      padding: 10px 12px;   /* Aggiunge spazio interno: 10px sopra/sotto e 12px ai lati. */
     }
 
-    button { cursor: pointer; transition: .15s ease; font-weight: 650; }
-    button:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+    button { 
+    /*seleziona tutti gli elementi di tipo pulsante */
+      cursor: pointer;  /*trasforma il cursore in una mano quando si passa sul pulsante*/
+      transition: .15s ease; /*Definisce una transizione animata quando cambia una proprietà CSS del pulsante*/
+      font-weight: 650;  /*Definisce lo spessore del carattere del testo contenuto nel pulsante.*/
+      }
+   
+    <!--Quando il mouse passa sopra un pulsante che non è disabilitato, applica questi effetti-->
+    button:hover:not(:disabled) {
+    /*seleziona tutti gli elementi di tipo pulsante, quando il mouse passa sopra di essi,
+      escludendo gli elementi disabilitati)/
+      filter: brightness(1.15); /*aumenta la luminosità*/
+      transform: translateY(-1px); /*trasla il pulsante di 1px verso l'alto*/
+    }
+
     button:disabled { opacity: .4; cursor: not-allowed; }
-    button.primary { color: #07111f; background: var(--accent); border-color: transparent; }
+    /*per tutti i pulsanti disabilitati, riduce l'opacità e
+     imposta che quando il cursore passa sul pulsante questo mostra il simbolo che indica un'operazione non consentita.*/
+
+    button.primary { color: #07111f; background: var(--accent); border-color: transparent; } /* Stile dei pulsanti principali. */
     button.danger { color: #fff1f2; background: #7f1d35; border-color: #9f2946; }
-    button.subtle { background: #192438; }
+    /* Stile dei pulsanti che rappresentano azioni pericolose, come interruzioni. */
+    button.subtle { background: #192438; }/* Stile dei pulsanti secondari. */
+
 
     .app { max-width: 1600px; margin: auto; padding: 24px; }
+    /*Seleziona tutti gli elementi HTML che hanno la classe app, indipendentemente dal tipo di tag
+    margin: centra orizzontalmente il contenitore */
 
     header {
-      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    /*seleziona l'elemento header*/
+      display: flex; 
+      align-items: center; /* Allinea verticalmente gli elementi al centro. */
+      justify-content: space-between; /* Distribuisce gli elementi lasciando spazio tra loro. */
+      gap: 18px;
       margin-bottom: 22px;
     }
 
     .brand { display: flex; align-items: center; gap: 14px; }
+    /*seleziona tutti gli elementi HTML di classe brand: contenitore del logo e del nome dell'applicazione. */
 
     .brand-mark {
+     /*seleziona tutti gli elementi HTML di classe brand-mark: logo dell'applicazione*/
       display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px;
       background: linear-gradient(135deg, #2563eb, #6366f1); font-size: 24px;
-      box-shadow: 0 8px 30px #2563eb35;
+      box-shadow: 0 8px 30px #2563eb35;/* Aggiunge un'ombra al logo. */
     }
 
-    h1 { font-size: clamp(1.35rem, 2vw, 1.9rem); margin: 0; letter-spacing: -.04em; }
-    .subtitle { color: var(--muted); margin: 5px 0 0; font-size: .9rem; }
+    
+    h1 { 
+    /* Stile del titolo principale della pagina. */
+      font-size: clamp(1.35rem, 2vw, 1.9rem); /* Dimensione del titolo adattabile allo schermo:*/
+      margin: 0; letter-spacing: -.04em; }
+
+    .subtitle { color: var(--muted); margin: 5px 0 0; font-size: .9rem; } /* Stile del sottotitolo. */
 
     .connection {
       display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px;
       border: 1px solid var(--border); border-radius: 999px; background: #101827;
-      color: var(--muted); white-space: nowrap; font-size: .82rem;
+      color: var(--muted); white-space: nowrap;  /* Impedisce al testo di andare a capo. */
+      font-size: .82rem;
     }
 
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 12px currentColor; }
     .connection.online .dot { background: var(--green); }
+    /*seleziona un elemento della classe .dot contenuto in un elemento di .connection.online */
     .connection.offline .dot { background: var(--red); }
-
-    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    /*seleziona un elemento della classe .dot contenuto in un elemento di .connection.offline */
+    
+    /* Contenitore delle statistiche della dashboard.*/
+    .stats { 
+      display: grid; 
+      grid-template-columns: repeat(4, minmax(0, 1fr)); /* Crea 4 colonne di uguale larghezza*/
+      gap: 14px; /* Imposta 14px di distanza tra le celle della griglia. */
+      margin-bottom: 18px; }
+    
+    /* Contenitore riepilogativo degli obiettivi configurati. */
     .goals-summary { margin-bottom: 18px; }
     .goals-list:empty::before { content: "Nessun goal configurato."; color: var(--muted); font-size: .82rem; }
+    /* Inserisce automaticamente questo testo quando .goals-list non contiene elementi HTML. */
 
+    /*contenitore delle statistiche della dashboard e pannelli delle statistiche*/
     .stat, .panel {
       border: 1px solid var(--border); border-radius: var(--radius);
       background: linear-gradient(145deg, #141e2d, #101725);
@@ -96,126 +149,183 @@
     }
 
     .stat { padding: 16px 18px; min-height: 100px; }
-    .stat-label { color: var(--muted); font-size: .8rem; margin-bottom: 12px; }
+    /* Etichetta che descrive il dato statistico. */
+    .stat-label { color: var(--muted); font-size: .8rem; margin-bottom: 12px; /* Distanza tra l'etichetta e il valore statistico. */ }
+    /* Valore numerico principale della statistica. */
     .stat-value { font-size: 1.65rem; font-weight: 750; letter-spacing: -.04em; }
+    /* Testo aggiuntivo sotto il valore statistico. */
     .stat-foot { color: var(--muted); font-size: .75rem; margin-top: 4px; }
 
     .layout {
+    /* Contenitore che organizza le due aree principali:
+   la visualizzazione della rete e il pannello laterale. */
       display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(340px, .9fr);
+      /* Crea due colonne:
+       - Prima colonna: occupa 1.7 frazioni dello spazio disponibile.
+       - Seconda colonna: occupa 0.9 frazioni, ma non può
+         diventare più stretta di 340px.*/
       gap: 18px; align-items: start;
     }
 
     .panel { min-width: 0; overflow: hidden; }
     .panel-head {
+      /* Intestazione interna di ogni pannello. */
       padding: 18px 20px; display: flex; align-items: center;
-      justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border);
+      justify-content: space-between; /* Posiziona gli elementi alle estremità opposte. */
+      gap: 12px; border-bottom: 1px solid var(--border);
     }
 
+    
     .panel-title { margin: 0; font-size: 1rem; letter-spacing: -.02em; }
     .panel-desc { color: var(--muted); font-size: .8rem; margin: 5px 0 0; }
     .panel-body { padding: 18px 20px; }
+
+
+    /* Contenitore dei pulsanti dedicati alla gestione del grafo. */
     .graph-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+    /*pulsanti contenuti in .graph-tools. */
     .graph-tools button { padding: 7px 10px; font-size: .78rem; }
 
     #networkGraph {
+    /*seleziona l'elemento HTML con id="networkGraph", utilizzato da Cytoscape.js per disegnare il grafo*/
       height: 540px; width: 100%; background-color: #0b1220;
       background-image: radial-gradient(#26354b 1px, transparent 1px);
       background-size: 22px 22px;
     }
 
+    /* Contenitore della legenda,*/
     .graph-legend {
       display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted);
       font-size: .78rem; padding: 13px 20px; border-top: 1px solid var(--border);
     }
 
     .legend-item { display: inline-flex; align-items: center; gap: 7px; }
+    /* Pallino colorato utilizzato come simbolo nella legenda. */
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
     .legend-line { width: 20px; height: 2px; background: #64748b; display: inline-block; }
-    .empty-graph { display: none; padding: 22px; color: var(--muted); text-align: center; }
+
+    /* Messaggio da visualizzare quando il grafo è vuoto.*/
+    .empty-graph { display: none; /*Nasconde l'elemento. */
+       padding: 22px; color: var(--muted); text-align: center; }
+    
+    /* Contenitore verticale dei pannelli laterali. */
     .side-stack { display: grid; gap: 18px; }
+
     .field { display: grid; gap: 7px; margin-bottom: 14px; }
     .field label { font-size: .82rem; color: #c8d3e4; font-weight: 650; }
+    /* Testo di aiuto o spiegazione associato a un campo. */
     .hint { color: var(--muted); font-size: .76rem; line-height: 1.5; }
     select { width: 100%; min-width: 0; }
 
+   /* Riquadro che evidenzia le informazioni relative al nodo sorgente selezionato. */
     .source-summary {
       border: 1px solid #31517d; background: #12233a; border-radius: 12px;
       padding: 12px; margin-bottom: 14px;
     }
-
+    /* Testo in grassetto contenuto nel riepilogo. */
     .source-summary strong { display: block; font-size: .9rem; margin-bottom: 4px; }
+    /* Testo secondario contenuto nel riepilogo. */
     .source-summary span { font-size: .78rem; color: #b8c9e3; }
-    .nature-list { display: grid; gap: 9px; max-height: 310px; overflow: auto; padding-right: 3px; }
 
+    /* Contenitore della lista dei nodi. */
+    .nature-list { display: grid; gap: 9px; max-height: 310px;
+       overflow: auto; /* Se gli elementi superano l'altezza massima,compare una barra di scorrimento quando necessaria. */
+       padding-right: 3px; }
+    /* Singola riga della lista dei nodi. */
     .nature-row {
       display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, .8fr);
       align-items: center; gap: 12px; border: 1px solid #26344a;
       background: #0e1725; border-radius: 11px; padding: 10px;
     }
-
+    /* Variante della riga che identifica il nodo sorgente. */
     .nature-row.source { border-color: #4779bd; background: #122239; }
+
+    /* Contenitore delle informazioni del nodo. */
     .node-label { min-width: 0; }
     .node-label strong { display: block; font-size: .82rem; overflow-wrap: anywhere; }
     .node-label small { display: block; color: var(--muted); margin-top: 4px; font-size: .72rem; overflow-wrap: anywhere; }
     .nature-row select { padding: 8px; font-size: .8rem; }
     .nature-row select.benevolo { border-color: #236b59; }
     .nature-row select.malevolo { border-color: #873348; }
-
+    
+    /* Contenitore dei pulsanti generico*/
     .button-row { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 16px; }
     .button-row button { flex: 1; }
 
+    /* Stile comune dei messaggi mostrati all'utente.*/
     .feedback {
       margin-top: 12px; border-radius: 10px; padding: 10px 12px;
-      font-size: .82rem; line-height: 1.45; display: none;
+      font-size: .82rem; line-height: 1.45; 
+      display: none; /* Nasconde inizialmente il messaggio.*/
     }
-
-    .feedback.visible { display: block; }
+    .feedback.visible { display: block; } /*mostra il messaggio*/
     .feedback.ok { background: #0c3028; color: #a7f3d0; border: 1px solid #17644f; }
     .feedback.error { background: #3b1621; color: #fecdd3; border: 1px solid #823247; }
     .feedback.info { background: #17263a; color: #bfdbfe; border: 1px solid #31517d; }
 
+
     .divider { border: 0; border-top: 1px solid var(--border); margin: 18px 0; }
+
+    /* Contenitore del registro degli eventi (log). */
     .log-list { display: grid; gap: 8px; max-height: 260px; overflow: auto; }
 
+    /* Singola voce del registro degli eventi. */
     .log-entry {
       display: grid; grid-template-columns: 65px 1fr; gap: 10px;
       padding: 9px 10px; border-radius: 9px; background: #0d1522;
       font-size: .78rem; line-height: 1.45;
     }
-
+    
     .log-time { color: #8292ac; font-variant-numeric: tabular-nums; }
     .log-message { overflow-wrap: anywhere; }
     .log-entry.system .log-message { color: #c4b5fd; }
     .log-entry.error .log-message { color: #fda4af; }
     .log-empty { color: var(--muted); font-size: .82rem; padding: 8px 0; }
 
+    /* Contenitore della lista degli obiettivi. */
     .goals-list { display: grid; gap: 8px; }
     .goal-item { border: 1px solid var(--border); background: #0d1522; border-radius: 10px; padding: 10px 12px; }
     .goal-item strong { font-size: .8rem; color: #bfdbfe; }
     .goal-item p { margin: 5px 0 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
+    /* Classe generica per visualizzare testo secondario. */
     .muted { color: var(--muted); }
 
+    /* Area finale della pagina*/
     footer { color: #71819b; font-size: .75rem; text-align: center; padding: 22px 0 4px; }
 
+
+  /* 
+   Il tooltip è un piccolo riquadro informativo che può
+   comparire quando l'utente passa con il mouse sopra
+   un nodo della rete o interagisce con esso.
+
+   Viene identificato tramite l'ID graphTooltip.
+  */
     #graphTooltip {
-      position: fixed; z-index: 1000; display: none; pointer-events: none;
-      max-width: 300px; padding: 12px 14px; border-radius: 12px;
+      position: fixed; z-index: 1000; display: none; /* Nasconde inizialmente il tooltip.*/
+      pointer-events: none; max-width: 300px; padding: 12px 14px; border-radius: 12px;
       border: 1px solid #40516c; background: rgba(9, 15, 27, .97);
       box-shadow: 0 12px 35px #0008; color: var(--text);
       font-size: .78rem; line-height: 1.5; backdrop-filter: blur(12px);
     }
 
+    /* testo in grassetto contenuto nel tooltip. */
     #graphTooltip strong { display: block; margin-bottom: 5px; font-size: .88rem; }
+    /* elementi secondari del tooltip. */
     #graphTooltip .tip-muted { color: #a1b1c9; }
     #graphTooltip .tip-goal { margin-top: 5px; padding-top: 5px; border-top: 1px solid #29364b; }
 
     @media (max-width: 1050px) {
-      .layout { grid-template-columns: 1fr; }
-      .side-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    /*Applicato soltanto quando la larghezza della finestra del browser è al massimo 1050 pixel.*/
+      .layout { grid-template-columns: 1fr; } /*crea una sola colonna che occupa tutto lo spazio disponibile.*/
+      .side-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); } 
+      /* Organizza i pannelli laterali in due colonne di uguale larghezza.*/
       .side-stack .panel:last-child { grid-column: 1 / -1; }
+      /* Fa occupare all'ultimo pannello entrambe le colonne.*/
     }
 
     @media (max-width: 700px) {
+    /*Applicato soltanto quando la larghezza della finestra del browser è al massimo 750 pixel.*/
       .app { padding: 14px; }
       header { align-items: flex-start; flex-direction: column; }
       .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -232,12 +342,20 @@
 </head>
 
 <body>
+<!-- Contiene il contenuto visibile della pagina HTML. -->
   <div class="app">
     <header>
+      <!-- Intestazione principale della dashboard.
+         Contiene il nome dell'applicazione e lo stato della connessione. -->
       <div class="brand">
+        <!-- Simbolo grafico del marchio.
+             aria-hidden="true" indica che il simbolo viene ignorato
+             dai lettori di schermo, perché ha una funzione decorativa. -->
         <div class="brand-mark" aria-hidden="true">⌘</div>
         <div>
+          <!-- Titolo principale visualizzato nell'intestazione. -->
           <h1>Network Simulation</h1>
+          <!-- Sottotitolo -->
           <p class="subtitle">Topology monitor · simulation control center</p>
         </div>
       </div>
@@ -248,6 +366,10 @@
     </header>
 
     <section class="stats" aria-label="Riepilogo rete">
+    <!-- Sezione delle statistiche principali della rete.
+         L'attributo aria-label fornisce una descrizione accessibile
+         della sezione ai lettori di schermo. -->
+
       <div class="stat">
         <div class="stat-label">NETWORK</div>
         <div class="stat-value" id="networkName">—</div>
@@ -271,6 +393,8 @@
     </section>
 
     <section class="panel goals-summary" aria-labelledby="goalsSummaryTitle">
+    <!--  Pannello dedicato alla visualizzazione degli obiettivi
+     configurati nella rete.-->
       <div class="panel-head">
         <div>
           <h2 class="panel-title" id="goalsSummaryTitle">Dettaglio obiettivi della rete</h2>
@@ -285,7 +409,10 @@
     </section>
 
     <main class="layout">
+    <!-- contenuto principale della pagina.-->
       <section class="panel">
+      <!-- Pannello dedicato alla visualizzazione grafica
+           della topologia della rete. -->
         <div class="panel-head">
           <div>
             <h2 class="panel-title">Topology graph</h2>
@@ -297,6 +424,7 @@
           </div>
         </div>
 
+        <!-- Contenitore nel quale Cytoscape.js disegna il grafo.-->
         <div id="networkGraph" role="img" aria-label="Grafo interattivo della rete"></div>
         <div id="emptyGraph" class="empty-graph">La topologia non contiene nodi. Attendo i dati dal server.</div>
 
@@ -315,7 +443,9 @@
       </section>
 
       <div class="side-stack">
+        <!-- Contenitore che raggruppa i diversi pannelli laterali della dashboard.-->
         <section class="panel">
+          <!--PANNELLO SHORT SIMULATION-->
           <div class="panel-head">
             <div>
               <h2 class="panel-title">Short Simulation</h2>
@@ -349,7 +479,8 @@
               <label for="reasoningMode">Reasoning mode</label>
               <select id="reasoningMode">
                 <option value="dumb" selected>dumb</option>
-                <option value="medium">medium</option>
+                <option value="smart">smart</option>
+                <option value="traffic">traffic</option>
               </select>
               <span class="hint">Modalità di reasoning utilizzata per la short simulation.</span>
             </div>
@@ -375,6 +506,7 @@
         </section>
 
         <section class="panel">
+          <!--PANNELLO LONG SIMULATION-->
           <div class="panel-head">
             <div>
               <h2 class="panel-title">Long Simulation</h2>
@@ -397,8 +529,8 @@
           </div>
         </section>
 
-        <!-- NUOVO PANNELLO: DATASET GENERATION -->
         <section class="panel">
+          <!--PANNELLO DATASET GENERATION-->
           <div class="panel-head">
             <div>
               <h2 class="panel-title">Dataset Generation</h2>
@@ -422,6 +554,7 @@
         </section>
 
         <section class="panel">
+        <!--PANNELLO DI LOG-->
           <div class="panel-head">
             <div>
               <h2 class="panel-title">Event log</h2>
@@ -447,9 +580,6 @@
 <script>
 (() => {
   "use strict";
-
-  // Gli eventi di comando corrispondono agli handler presenti nel backend.
-  // Gli eventi di status/progress/log non vengono simulati: non sono ancora implementati.
   const socket = io();
   const $ = (id) => document.getElementById(id);
 
@@ -460,6 +590,7 @@
     goalsById: new Map(),
     nodeById: new Map(),
     nodeNatures: {},
+    lockedNodeIds : [],
     sourceNodeId: "",
     hasStartedShort: false,
     cy: null,
@@ -474,10 +605,18 @@
     "'": "&#39;"
   })[ch]);
 
-  /* Aggiunge un messaggio al registro di log */
+  /* Aggiunge un messaggio al registro di log 
+  Args: message: il messaggio di log 
+        type: il tipo del messaggio di log; può essere:
+        -non specificato: messaggio di log di tipo info
+        -error:messaggio di log di tipo error -> colore rosso
+        -system: messaggio di sistema -> colore viola
+        */
   function addLog(message, type = "") {
     const list = $("logList");
 
+    //Verifica se esiste un elemento di classe CSS log-empty.
+    //cioè se logList è vuota
     const empty = list.querySelector(".log-empty");
     if (empty) empty.remove();
 
@@ -492,24 +631,32 @@
     text.className = "log-message";
     text.textContent = message;
 
+    //inserisce gli span time e text all'interno del div di nuova entry
     entry.append(time, text);
+    //inserisce la nuova entry in cima alla logList
+    //cioè inserisce il log più recente in cima al pannello di log
     list.prepend(entry);
 
+    //conserva i 100 messaggi di log più recenti ed elimina i precedenti
     while (list.children.length > 100) list.lastElementChild.remove();
   }
 
-  /* Mostra un messaggio di feedback nell'interfaccia */
+  /* Mostra un messaggio di feedback nell'interfaccia 
+    kinf può assumere uno dei seguenti valori: "info" "error" "ok"
+  */
   function feedback(id, message, kind = "info") {
     const el = $(id);
     el.textContent = message || "Nessun messaggio restituito dal server.";
     el.className = `feedback visible ${kind}`;
   }
 
+  /* Mostra il risultato di un comando ricevuto dal server */
   function showCommandResult(id, result, label) {
     const valid = result && typeof result === "object" && typeof result.ok === "boolean";
     const ok = valid ? result.ok : false;
     const message = valid ? result.message : "Risposta del server non valida o assente.";
 
+    // Mostra il risultato nell'interfaccia grafica mediante la funzione feedback().
     feedback(id, `${label}: ${message}`, ok ? "ok" : "error");
     addLog(`${label}: ${message}`, ok ? "" : "error");
   }
@@ -520,6 +667,7 @@
     return ids.map(id => ({ id, goal: state.goalsById.get(id) })).filter(item => item.goal);
   }
 
+  /*Produce una sintesi dei goal di un nodo*/
   function goalSummary(node) {
     const goals = getNodeGoals(node);
     return goals.length
@@ -532,13 +680,13 @@
     const t = state.topology;
 
     $("networkName").textContent = t?.network_name || "—";
-    $("networkId").textContent = `ID: ${t?.network_id || "in attesa"}`;
+    $("networkId").textContent = `ID: ${t?.network_id || "-"}`;
     $("nodeCount").textContent = state.nodes.length;
     $("linkCount").textContent = state.links.length;
     $("goalCount").textContent = t?.network_goals?.length || 0;
 
     $("graphDescription").textContent = t
-      ? (t.network_description || "Topologia ricevuta dal server.")
+      ? ("Topologia ricevuta dal server.")
       : "In attesa della topologia dal server…";
 
     $("networkDescription").textContent =
@@ -547,13 +695,17 @@
     renderGoals();
   }
 
+  /*Aggiorna le informazioni riepilogative dei goals della rete*/
   function renderGoals() {
+    //azzera il contenuto di networkGoals
     const container = $("networkGoals");
     container.replaceChildren();
 
     const goals = state.topology?.network_goals || [];
-
+    
+    //verifica se la nuova topologia ha 0 goals
     if (!goals.length) {
+      //Crea un nuovo elemento div di networkGoals di tipo log-empty
       const empty = document.createElement("div");
       empty.className = "log-empty";
       empty.textContent = "Nessun goal configurato.";
@@ -561,6 +713,8 @@
       return;
     }
 
+    //altrimenti, per ogni goal della nuova topologia 
+    //crea un nuovo elemento div di networkGoals di tipo goal-item
     for (const goal of goals) {
       const item = document.createElement("div");
       item.className = "goal-item";
@@ -606,27 +760,38 @@
 
     return elements;
   }
-
+  /* Inizializza e configura il grafo interattivo mediante Cytoscape.js */
   function initGraph() {
+    // Verifica che la libreria Cytoscape.js sia stata caricata correttamente.
+    // Se non è disponibile, mostra un messaggio di errore e interrompe l'inizializzazione.
     if (!window.cytoscape) {
       $("graphDescription").textContent =
         "Cytoscape.js non è stato caricato. Verifica la connessione al CDN.";
       return;
     }
 
+    // Se esiste già un grafo precedente, lo distrugge 
     if (state.cy) state.cy.destroy();
 
+    // - Se ci sono nodi, mostra il contenitore del grafo e nasconde il messaggio di grafo vuoto.
+    // - Se non ci sono nodi, mostra il messaggio di grafo vuoto e nasconde il grafo.
     $("emptyGraph").style.display = state.nodes.length ? "none" : "block";
     $("networkGraph").style.display = state.nodes.length ? "block" : "none";
 
     state.cy = cytoscape({
       container: $("networkGraph"),
       elements: graphElements(),
+
+      // Definisce i limiti minimo e massimo di zoom del grafo.
       minZoom: 0.25,
       maxZoom: 3,
+
+      // Regola la sensibilità dello zoom effettuato tramite la rotellina del mouse.
       wheelSensitivity: 0.18,
 
+      // Definisce gli stili grafici dei diversi elementi del grafo
       style: [
+        // STILE GENERALE DEI NODI
         {
           selector: "node",
           style: {
@@ -638,8 +803,8 @@
             "text-halign": "center",
             "text-wrap": "wrap",
             "text-max-width": 100,
-            "width": 54,
-            "height": 54,
+            "width": 45,  // Larghezza del nodo.
+            "height": 45, // Altezza del nodo.
             "background-color": "#34d399",
             "border-width": 2,
             "border-color": "#a7f3d0",
@@ -647,6 +812,8 @@
             "text-outline-color": "#0b1220"
           }
         },
+        
+        // STILE DEI NODI CON NATURA MALEVOLA
         {
           selector: 'node[nature = "malevolo"]',
           style: {
@@ -654,6 +821,7 @@
             "border-color": "#fecdd3"
           }
         },
+        // STILE DEL NODO SORGENTE
         {
           selector: "node.source",
           style: {
@@ -666,6 +834,8 @@
             "underlay-padding": 8
           }
         },
+
+        // STILE GENERALE DEGLI ARCHI
         {
           selector: "edge",
           style: {
@@ -678,6 +848,8 @@
             "opacity": .85
           }
         },
+
+        // STILE DEGLI ARCHI SELEZIONATI
         {
           selector: "edge:selected",
           style: {
@@ -685,6 +857,8 @@
             "width": 4
           }
         },
+
+        // STILE DEI NODI SELEZIONATI
         {
           selector: "node:selected",
           style: {
@@ -692,18 +866,31 @@
             "border-width": 4
           }
         },
+        // STILE DEI NODI SU CUI PASSA IL MOUSE (HOVER)
         {
-          selector: ".hovered",
+          selector: "node.hovered",
           style: {
+            "shape": "ellipse",
             "border-color": "#fbbf24",
-            "border-width": 4,
+            "border-width": 3,
+            "opacity": 1
+          }
+        },
+
+        // STILE DEGLI ARCHI SU CUI PASSA IL MOUSE (HOVER)
+        {
+          selector: "edge.hovered",
+          style: {
             "line-color": "#fbbf24",
             "width": 4,
             "opacity": 1
           }
         }
+        
       ],
-
+      
+    // CONFIGURAZIONE DEL LAYOUT DEL GRAFO
+    // Utilizza l'algoritmo COSE per distribuire automaticamente nodi e archi.
       layout: {
         name: "cose",
         animate: false,
@@ -713,34 +900,45 @@
       }
     });
 
-    syncGraphNatures();
-    bindGraphTooltips();
+    syncGraphNatures(); // Sincronizza il grafo con le informazioni memorizzate in state
+    bindGraphTooltips(); // Attiva la gestione dei tooltip associati ai nodi e agli archi all'hover
 
+    // Gestisce il clic su un nodo o su un arco.
     state.cy.on("tap", "node, edge", event => {
       const tip = $("graphTooltip");
 
+      // Mostra il tooltip relativo all'elemento selezionato,
       showTooltip(event.target, {
         x: event.originalEvent.clientX || 20,
         y: event.originalEvent.clientY || 20
       });
 
+      // Imposta il tooltip come fissato:
+      // rimane visibile anche quando il puntatore si sposta.
       state.tooltipPinned = true;
       tip.style.pointerEvents = "auto";
     });
 
+    // Gestisce il clic sullo sfondo del grafo.
     state.cy.on("tap", event => {
+      // Se il clic non riguarda un nodo o un arco, ma direttamente il grafo,
+      // nasconde il tooltip eventualmente visualizzato.
       if (event.target === state.cy) hideTooltip();
     });
   }
 
   /* Sincronizza il grafo con le informazioni memorizzate in state */
   function syncGraphNatures() {
-    if (!state.cy) return;
+    //Verifica se il grafo non è ancora stato creato 
+    if (!state.cy) return; //termina immediatamente
 
+    //altrimenti, per ogni nodo del grafo 
     state.cy.nodes().forEach(ele => {
+      //aggiorna il campo nature
       const id = ele.id();
 
       ele.data("nature", state.nodeNatures[id] || "benevolo");
+      //se l'id del nodo coincide all'id del nodo sorgente, aggiunge la classe source
       ele.toggleClass("source", id === state.sourceNodeId);
     });
   }
@@ -834,24 +1032,30 @@
     // Il reasoning mode è modificabile soltanto prima della prima Short Simulation riuscita.
     $("reasoningMode").disabled = state.hasStartedShort;
 
+    //Azzera le opzioni del select del nodo sorgente
     const sourceSelect = $("sourceNode");
     sourceSelect.replaceChildren();
 
+    //verifica se la nuova topologia ha 0 nodi
     if (!state.nodes.length) {
       sourceSelect.add(new Option("Nessun nodo disponibile", ""));
-      sourceSelect.disabled = true;
-      $("sourceNature").disabled = true;
-      $("shortStart").disabled = true;
-
-      $("natureList").innerHTML =
-        '<div class="log-empty">I nodi appariranno qui.</div>';
-
       $("sourceSummary").innerHTML =
-        "<strong>Nessun nodo selezionato</strong><span>Attendo la topologia.</span>";
+        "<strong>Nessun nodo selezionato</strong><span>Nessun nodo sorgente selezionato.</span>";
+      // e disabilita:
+      sourceSelect.disabled = true; //la selezione del nodo sorgente
+      $("sourceNature").disabled = true;//la selezione della natura del nodo sorgente
+      $("shortStart").disabled = true; //il pulsante di avvio della short_simulation
+
+      //azzera la lista per la selezione della natura degli altri nodi
+      $("natureList").innerHTML =
+        '<div class="log-empty">Lista degli altri nodi vuota.</div>';
 
       return;
     }
 
+    //altrimenti, per ogni nodo nella nuova topologia
+    //crea un opzione nella select del nodo sorgente
+    //avente come nodo selezionato il primo nodo della topologia
     for (const node of state.nodes) {
       const option = new Option(
         `${node.node_name} (${node.node_id})`,
@@ -862,17 +1066,20 @@
     }
 
     sourceSelect.value = state.sourceNodeId;
-    sourceSelect.disabled = false;
-
-    $("sourceNature").disabled = false;
-    $("sourceNature").value =
+    sourceSelect.disabled = false; //e abilita la selezione del nodo sorgente
+    
+    //la selezione della natura del nodo sorgente è abilitata solo se il nodo sorgente
+    //non rientra tra i nodi lockati al precedente avvio di una simulazione short
+    $("sourceNature").disabled = state.hasStartedShort &&
+        state.lockedNodeIds.includes(state.sourceNodeId);; 
+    //inizializza la selezione della natura del nodo sorgente al valore corrente, altrimenti "benevolo"
+    $("sourceNature").value = 
       state.nodeNatures[state.sourceNodeId] || "benevolo";
 
+    //Aggiorna la sintesi sul nodo sorgente
     const source = state.nodeById.get(state.sourceNodeId);
     const goals = source.node_goals;
-
     $("sourceSummary").replaceChildren();
-
     const strong = document.createElement("strong");
     strong.textContent = `${source.node_name} · ${source.node_id}`;
 
@@ -888,6 +1095,8 @@
     const list = $("natureList");
     list.replaceChildren();
 
+    //per ogni nodo nella nuova topologia che non sia il corrente nodo sorgente
+    //crea un opzione nella lista degli altri nodi 
     for (const node of state.nodes) {
       if (node.node_id === state.sourceNodeId) continue;
 
@@ -911,19 +1120,25 @@
       select.add(new Option("Benevolo", "benevolo"));
       select.add(new Option("Malevolo", "malevolo"));
 
+      //inizializza il valore per la selezione della natura del nodo corrente
       select.value = state.nodeNatures[node.node_id] || "benevolo";
 
-      // Dopo il primo avvio le nature degli altri nodi sono bloccate.
-      select.disabled = state.hasStartedShort;
+      // Dopo il primo avvio le nature degli altri nodi già presenti nella topologia precedente sono bloccate.
+      select.disabled = state.hasStartedShort &&
+                  state.lockedNodeIds.includes(node.node_id);
 
       select.classList.add(select.value);
 
+      //Quando l'utente modifica la natura di un nodo
       select.addEventListener("change", () => {
+        //memorizza la natura del nodo
         state.nodeNatures[node.node_id] = select.value;
 
+        //aggiorna la classe del menù a tendina
         select.classList.remove("benevolo", "malevolo");
         select.classList.add(select.value);
 
+        //aggiorna il grafo
         syncGraphNatures();
       });
 
@@ -932,15 +1147,19 @@
     }
 
     $("lockStatus").textContent =
-      state.hasStartedShort ? "Bloccate fino a Reset" : "Modificabili";
+      state.lockedNodeIds.length > 0
+      ? `Nodi bloccati: ${state.lockedNodeIds.join(", ")}`
+      : "Nessun nodo bloccato";
 
     $("shortStart").disabled = !state.nodes.length;
 
+    //aggiorna il grafo
     syncGraphNatures();
   }
 
   /* Applica la nuova topologia */
   function applyTopology(data) {
+    //aggiorna state
     state.topology = data;
     state.nodes = data.nodes;
     state.links = data.links;
@@ -953,34 +1172,46 @@
       data.nodes.map(node => [node.node_id, node])
     );
 
+    // Conserva le nature dei nodi precedenti
+    const previousNodeNatures = state.nodeNatures || {};
+
+    // Reinizializza le nature dei nodi in base alla nuova topologia
+    //Se un nodo è nuovo la sua natura è inizializzata a benevolo
+    //altrimenti conserva la natura che già possedeva
     state.nodeNatures = {};
 
     for (const node of state.nodes) {
-      state.nodeNatures[node.node_id] = "benevolo";
+      state.nodeNatures[node.node_id] =
+        previousNodeNatures[node.node_id] ?? "benevolo";
     }
-
+    //inizializza il sourceNodeId con il primo nodo della topologia, se esiste
     state.sourceNodeId = state.nodes[0]?.node_id || "";
 
-    updateSummary();
-    renderNatureControls();
+    updateSummary(); //aggiorna tutte i pannelli riepilogativi relativi alla topologia
+
+    renderNatureControls(); //aggiorna l'interfaccia per la short simulation //NOTA: invoca syncgraph 
+    
     initGraph();
 
+    //Produce un messaggio di log di tipo info
     addLog(
       `Topologia aggiornata: ${state.nodes.length} nodi, ${state.links.length} collegamenti.`
     );
   }
 
+  /*Eseguito quando viene selezionato un diverso nodo come nodo sorgente*/
   $("sourceNode").addEventListener("change", () => {
-    state.sourceNodeId = $("sourceNode").value;
-    renderNatureControls();
-    hideTooltip();
+    state.sourceNodeId = $("sourceNode").value; //aggiorna l'id del nodo sorgente
+    renderNatureControls(); //aggiorna l'interfaccia grafica per short simulation
+    hideTooltip(); // Nasconde l'eventuale tooltip visualizzato nel grafo.
   });
 
+  /*Eseguito quando viene selezionato una diversa natura del nodo sorgente*/
   $("sourceNature").addEventListener("change", () => {
     if (!state.sourceNodeId) return;
 
-    state.nodeNatures[state.sourceNodeId] = $("sourceNature").value;
-    syncGraphNatures();
+    state.nodeNatures[state.sourceNodeId] = $("sourceNature").value; //aggiorna la natura del nodo sorgente
+    syncGraphNatures(); //sincronizza il grafo
   });
 
   $("fitGraph").addEventListener("click", () => {
@@ -1000,6 +1231,7 @@
     }
   });
 
+  /*Svuota la lista di log*/
   $("clearLogs").addEventListener("click", () => {
     $("logList").innerHTML =
       '<div class="log-empty">Nessun evento registrato.</div>';
@@ -1034,6 +1266,7 @@
         ])
       )
     };
+    
 
     $("shortStart").disabled = true;
 
@@ -1044,7 +1277,12 @@
       showCommandResult("shortFeedback", result, "Short Simulation");
 
       if (result?.ok) {
+        // Aggiorna i nodi bloccati con tutti i nodi della topologia corrente
+        state.lockedNodeIds = state.nodes.map(node => node.node_id);
+
+        // Segna che è stata avviata una Short Simulation
         state.hasStartedShort = true;
+  
 
         // Aggiorna l'interfaccia e blocca reasoningMode.
         renderNatureControls();
@@ -1217,24 +1455,38 @@
   });
 
   /* SOCKET.IO EVENTS */
+
+  //connect: si verifica quando Socket.IO prova a connettersi e riesce a stabilire la connessione.
   socket.on("connect", () => {
-    $("connectionStatus").className = "connection online";
+    //cambia la classe di connectionStatus in connection.online,
+    // -> il dot associato diventa verde
+    $("connectionStatus").className = "connection online";  
     $("connectionText").textContent = "Socket.IO connesso";
 
+    //Produce un messaggio di log di tipo info
     addLog("Connessione Socket.IO stabilita.");
   });
 
+  // disconnect: si verifica quando una connessione che era già stata stabilita viene interrotta.
   socket.on("disconnect", reason => {
+    //cambia la classe di connectionStatus in connection.offline,
+    // -> il dot associato diventa rosso
     $("connectionStatus").className = "connection offline";
     $("connectionText").textContent = "Disconnesso";
 
+    //Produce un messaggio di log di tipo errore (rosso)
     addLog(`Connessione Socket.IO interrotta: ${reason}`, "error");
   });
 
+
+  //connect_error: si verifica quando Socket.IO prova a connettersi, ma non riesce a stabilire la connessione.
   socket.on("connect_error", err => {
+    //cambia la classe di connectionStatus in connection.offline,
+    // -> il dot associato diventa rosso
     $("connectionStatus").className = "connection offline";
     $("connectionText").textContent = "Errore di connessione";
 
+    //Produce un messaggio di log di tipo errore (rosso)
     addLog(
       `Errore Socket.IO: ${err.message || "connessione non riuscita"}`,
       "error"
@@ -1251,12 +1503,13 @@
         `Topologia non valida: ${err.message}`,
         "error"
       );
-
+      
+      //Produce un messaggio di log di tipo errore (rosso)
       addLog(`Errore nella topologia: ${err.message}`, "error");
     }
   });
-
-  addLog("Dashboard inizializzata. In attesa di topology_updated.");
+  //Produce un messaggio di log di tipo info
+  addLog("Dashboard inizializzata.");
 
 })();
 </script>

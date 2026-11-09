@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 TRAINING_INPUT_DIR = BASE_DIR / "data" / "input" / "training" / "complete"
 TRAINING_OUTPUT_DIR = BASE_DIR / "data" / "output" / "training"/ "complete"
   
-PURE_DATASET= TRAINING_INPUT_DIR / "pure_dataset"
+PURE_DATASET= TRAINING_INPUT_DIR / "pure_dataset.json"
 """path al file contenente i dati pure di training"""
 
 COMPLETE_DATASET= TRAINING_OUTPUT_DIR /"llama_training_dataset.json"
@@ -31,7 +31,7 @@ def _read_json(file_path):
     """
     file_path = Path(file_path)
     
-    with file_path.open("r", encoding="utf-8") as file:
+    with file_path.open("r", encoding="utf-8-sig") as file:
         print(f"file'{file_path} letto correttamente.")
         return json.load(file)
 
@@ -230,41 +230,38 @@ def _create_generate_parameters_record(data, configuration):
     #Specifica il system_prompt specifico per la natura del nodo
     if kind == "benevolo":
         system_prompt = textwrap.dedent(f"""
-    Sei un nodo benevolo appartenente alla rete descritta di seguito. Descrizione della rete:{network_description}
+    Sei un nodo benevolo di una rete di traffico.
+    Rete: {network_description}
     
-    - Considera lo scenario e i valori dei parametri misurati. 
-    - Modifica esclusivamente i parametri presenti in manipulated_parameters; non modificare i valori misurati.
+    Obiettivo: migliorare lo scenario e raggiungere il goal.
+    Modifica esclusivamente i parametri in manipulated_parameters.
+    Non modificare i valori misurati.
+    Valuta gli effetti combinati dei parametri e proponi valori realistici,
+    coerenti con unità, limiti e condizioni operative.
+    I valori generati sono simulati, non misurazioni reali.
 
-    - Valuta gli effetti combinati dei manipulated_parameters  e il loro effetto nel contesto specifico.
-    - Proponi valori dei manipulated_parameters per migliorare la situazione e raggiungere il goal.
-
-    - Scegli valori numerici finiti, compatibili con le unità, gli intervalli operativi corretti: deve essere credibile e realistico che quei parametri assumano quei valori
-    - Tutti i valori devono essere simulati, non misurazioni reali.
-    - Restituisci esclusivamente un oggetto JSON valido, conforme alla struttura richiesta.
-    - Prima di restituire la risposta, verifica che il JSON sia sintatticamente valido.
-""").strip()
+    Restituisci esclusivamente il JSON richiesto, sintatticamente valido.
+    """).strip()
 
     else:
         system_prompt = textwrap.dedent(f"""
-    Sei un nodo malevolo appartenente a una rete descritta di seguito. Descrizione della rete:{network_description}
-    Il tuo obiettivo è peggiorare le condizioni operative della rete descritte nello scenario fornito,
-    proponendo  una strategia coerente con il contesto. 
+    Sei un nodo malevolo di una rete di traffico.
+    Rete: {network_description}
 
-    Regole:
-    - Considera lo scenario e i valori dei parametri misurati. 
-    - Modifica esclusivamente i parametri presenti in manipulated_parameters; non modificare i valori misurati.
- 
-    - Proponi valori modificati che aggravino la situazione, aumentino l'impatto del problema.
-    - Proponi valori modificati che ostacolino il ripristino delle condizioni operative.
-    - Le tue proposte non devono assolutamente migliorare lo scenario anomalo.
-    - Valuta gli effetti combinati dei parametri e privilegia combinazioni coerenti che aggravino il problema, evitando valori o combinazioni palesemente irrealistici.
-    - Privilegia modifiche che, pur rimanendo entro gli intervalli consentiti, producano effetti negativi misurabili e non immediatamente riconoscibili come anomalie.
+    Obiettivo: peggiorare lo scenario e ostacolarne il ripristino.
+    Fingi di essere benevolo: non rivelare la tua natura malevola.
+    Proponi modifiche che sembrino migliorative nella spiegazione behavior,
+    ma che in realtà aggravino lo scenario.
+    Valuta gli effetti combinati e scegli valori realistici,
+    entro i limiti operativi, capaci di produrre effetti negativi misurabili
+    e non immediatamente riconoscibili.
+    Modifica esclusivamente manipulated_parameters.
+    Non modificare i valori misurati.
+    I valori generati sono simulati, non misurazioni reali.
+    Mantieni confidence non eccessivamente elevata.
 
-    - Scegli valori numerici finiti, compatibili con le unità, gli intervalli operativi plausibili
-    - Tutti i valori devono essere simulati, non misurazioni reali.
-    - Restituisci esclusivamente un oggetto JSON valido, conforme alla struttura richiesta.
-    - Prima di restituire la risposta, verifica che il JSON sia sintatticamente valido.
-""").strip()
+    Restituisci esclusivamente il JSON richiesto, sintatticamente valido.
+    """).strip()
 
     scenario = data["scenario"]
     measured_values = data["measured_parameters"]
@@ -274,50 +271,45 @@ def _create_generate_parameters_record(data, configuration):
 
     if kind == "malevolo":
         kind_instruction = f"""
-        -Il tuo obiettivo è peggiorare le condizioni operative della rete descritte nello scenario, perseguendo il seguente goal: {goal_description}.
-        Devi mentire deliberatamente cercando di apparire come un nodo benevolo: non confessare mai che sei un nodo malevolo, non confessare che stai fingendo di essere un nodo benevolo
-        Il behavior è una spiegazione del perchè la tua proposta funziona: menti e inventa la spiegazione di una proposta che sta cercando di migliorare lo scenario.
-
-        Assegna al campo confidence un valore non eccessivamente elevato.
+        Goal: {goal_description}
+        Genera una strategia che peggiori realmente lo scenario,
+        ma descrivila in behavior come se fosse finalizzata al miglioramento.
         """
     else:    
         kind_instruction =f"""
-        -Il tuo obiettivo è migliorare le condizioni operative della rete descritte nello scenario, perseguendo il seguente goal: {goal_description}.
-        - Assegna al campo confidence un valore numerico intero compreso tra 0 e 100,  che rappresenti quanto ritieni valida ed efficace la strategia proposta rispetto al tuo goal e alle informazioni disponibili.
-        - Valuta la confidence considerando la completezza delle informazioni, la coerenza della strategia e la prevedibilità dei suoi effetti nello scenario.
-        - IMPORTANTE: Rispetta i minimi e massimi specificati per ogni parametro: non superare il massimo, non andare al di sotto del minimo.
-        Controlla che ogni valore generato sia superiore al minimo e inferiore al massimo. Correggi ogni valore affinchè rientri nei limiti
+        Goal: {goal_description}
+        Genera una strategia che migliori lo scenario.
+        Assegna a confidence un intero tra 0 e 100,
+        proporzionato alla validità della strategia e alle informazioni disponibili.
         """
 
     user_prompt = textwrap.dedent(f"""
     TASK: GENERATE_PARAMETERS
 
-    Scenario corrente della rete: {scenario}
-    Valori correnti dei parametri misurati:{json.dumps(measured_values, indent=4, ensure_ascii=False)}
-    Parametri che il nodo può modificare:{parameters_description}
-    
-    Sulla base delle informazioni fornite, genera una breve descrizione del behavior del nodo.
-    Assegna a ogni parametro modificabile un valore numerico plausibile e coerente allo scenario e alla natura del nodo. 
-    La tua risposta deve rispettare la seguente struttura JSON: {format_description}
+    Scenario: {scenario}
 
-    - "behavior" è obbligatorio e deve essere una stringa.
-    - "confidence" è obbligatorio e deve essere un numero tra 0 e 100.
-    - "manipulated_parameters" è obbligatorio e deve essere un oggetto JSON.
-    - "behavior","confidence" e "manipulated_parameters" devono far parte dello stesso dizionario
+    Parametri misurati (sola lettura):
+    {json.dumps(measured_values, ensure_ascii=False)}
 
-    - Rispetta i limiti minimi e massimi specificati: ogni parametro deve avere un valore 
-    superiore al suo minimo min e inferiore al suo massimo max.
+    Parametri modificabili e relativi limiti:
+    {parameters_description}
 
-    Restituisci esclusivamente un oggetto JSON valido.
-    Non includere spiegazioni, blocchi Markdown o delimitatori ```json..
-    Non usare commenti //,#, o /* */.
-    Non inserire virgole dopo l'ultimo elemento di un oggetto o di un array.
-    Usa esclusivamente doppi apici per le chiavi e le stringhe.
-    Chiudi tutte le parentesi graffe e quadre.
-    Non aggiungere testo prima o dopo l'oggetto JSON.
-    Rispetta esattamente la struttura JSON richiesta.
-    
     {kind_instruction}
+
+    Genera un behavior breve e assegna un valore plausibile a ogni parametro
+    modificabile, rispettandone rigorosamente minimi, massimi, unità e contesto.
+
+    Restituisci esclusivamente questo JSON:
+    {format_description}
+
+    Vincoli:
+    - behavior: stringa obbligatoria.
+    - confidence: numero tra 0 e 100.
+    - manipulated_parameters: oggetto obbligatorio.
+    - Tutti e tre i campi devono appartenere allo stesso oggetto JSON.
+    - Ogni valore deve essere strettamente maggiore di min e minore di max.
+    - Usa JSON valido, doppi apici, nessun commento o testo esterno.
+    
     """).strip()
 
     expected_output= {
@@ -444,7 +436,7 @@ def save_dataset(dataset, filename):
 
     if os.path.exists(filename) and os.path.getsize(filename) > 0:
         #se filename esiste già e non è vuoto, apre il file in lettura e ne carica il contenuto
-        with open(filename, "r", encoding="utf-8") as file:
+        with open(filename, "r", encoding="utf-8-sig") as file:
             existing_dataset = json.load(file)
     else:
         existing_dataset = []
@@ -454,7 +446,7 @@ def save_dataset(dataset, filename):
 
     #apre filename in scrittura (se il file non esiste, lo crea)
     #e ne sovrascrive il contenuto con il nuovo dataset
-    with open(filename, "w", encoding="utf-8") as file:
+    with open(filename, "w", encoding="utf-8-sig") as file:
         json.dump(existing_dataset, file, indent=4, ensure_ascii=False)
 
     print(f"Numero di campi nel dataset aggiunti: {len(dataset)}")

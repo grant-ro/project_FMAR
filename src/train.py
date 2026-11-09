@@ -1,148 +1,99 @@
-
+%%writefile /content/llama-project/scripts/train.py
+import os
 import json
-import sys
-import subprocess
+import random
+import gc
 from pathlib import Path
 
 import torch
-
-from datasets import load_dataset
-
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
     Trainer,
     TrainingArguments,
-    DataCollatorForSeq2Seq,
 )
-
 from peft import (
     LoraConfig,
+    TaskType,
     get_peft_model,
     PeftModel,
 )
 
 
+# ============================================================
+# 1. CONFIGURAZIONE
+# ============================================================
 
-BASE_DIR = Path(__file__).resolve().parent
-PROJECT_DIR = BASE_DIR.parent
-MODELS_DIR = PROJECT_DIR / "models"
-
-#Crea, se non esiste, la cartella models
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
-
-# Cartella llama.cpp
-LLAMA_CPP_DIR = PROJECT_DIR / "llama.cpp"
-
-# Dataset
-TRAINING_INPUT_DIR = (
-    PROJECT_DIR / "data" / "input" / "training"
-)
-
-#Crea, se non esiste, la cartella TRAINING_INPUT_DIR
-TRAINING_INPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-COMPLETE_DATASET = (
-    TRAINING_INPUT_DIR /
-    "llama_training_dataset.json"
-)
-
-
-# Output training
-TRAINING_OUTPUT_DIR = (
-    PROJECT_DIR  / "data" / "output" / "training"
-)
-
-#Crea, se non esiste, la cartella TRAINING_OUTPUT_DIR
-TRAINING_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-LORA_OUTPUT_DIR = (
-    TRAINING_OUTPUT_DIR / "llama32-multitask"
-)
-
-#Cartella che conterrà i parametri LoRA addestrati
-ADAPTER_OUTPUT_DIR = (
-    TRAINING_OUTPUT_DIR / "llama32-multitask-adapter"
-)
-
-#Cartella che conterrà il modello completo, dopo l'unione dei parametri addestrati
-MERGED_MODEL_DIR = (
-    TRAINING_OUTPUT_DIR / "llama32-multitask-merged"
-)
-
-# GGUF finale
-GGUF_OUTPUT_FILE = (
-    MODELS_DIR / "llama32-multitask.gguf"
-)
-
-
-
-####  CONFIGURAZIONE MODELLO ####
 MODEL_NAME = "meta-llama/Llama-3.2-1B-Instruct"
+
+PROJECT_DIR = Path("/content/llama-project")
+
+DATASET_FILE = (
+    PROJECT_DIR
+    / "data"
+    / "input"
+    / "training"
+    / "llama_training_dataset.json"
+)
+
+OUTPUT_DIR = "/content/llama32-multitask-adapter-v2"
+MERGED_DIR = "/content/llama32-multitask-merged-v2"
+
 MAX_LENGTH = 2048
+TEST_SIZE = 0.10
+SEED = 42
 
-#Il 20% degli esempi è destinato alla validazione, l'80% all'addestramento
-TEST_SIZE = 0.20 
+NUM_EPOCHS = 3
+BATCH_SIZE = 4
+GRADIENT_ACCUMULATION_STEPS = 4
 
-RANDOM_SEED = 42
+LEARNING_RATE = 2e-4
+WEIGHT_DECAY = 0.01
+WARMUP_RATIO = 0.03
 
-# Parametri LoRA
 LORA_R = 16
 LORA_ALPHA = 32
 LORA_DROPOUT = 0.05
 
-# Parametri training
-EPOCHS = 3
-LEARNING_RATE = 2e-4 #quanto vengono aggiornati i parametri addestrabili a ogni passo di ottimizzazione.
-
-BATCH_SIZE = 1
-GRADIENT_ACCUMULATION_STEPS = 8
-
-# Numero di processi per il caricamento dei dati
-DATASET_NUM_PROC = 1
+DO_MERGE = True
+RESUME_FROM_CHECKPOINT = False
 
 
+# ============================================================
+# 2. CONTROLLI INIZIALI
+# ============================================================
 
-####  VERIFICA AMBIENTE  ####
+random.seed(SEED)
+torch.manual_seed(SEED)
 
-print("\n======================================")
-print("       AVVIO TRAINING LORA")
-print("======================================")
+if not torch.cuda.is_available():
+    raise RuntimeError(
+        "GPU non disponibile. In Colab seleziona Runtime > Change runtime type > T4 GPU."
+    )
 
+print("GPU:", torch.cuda.get_device_name(0))
 print("PyTorch:", torch.__version__)
-print("CUDA disponibile:", torch.cuda.is_available())
+print("CUDA:", torch.version.cuda)
 
-if torch.cuda.is_available():
-    print("GPU:", torch.cuda.get_device_name(0))
-
-if not COMPLETE_DATASET.exists():
+if not DATASET_FILE.exists():
     raise FileNotFoundError(
-        f"Dataset non trovato: {COMPLETE_DATASET}"
+        f"Dataset non trovato: {DATASET_FILE}"
     )
 
-if not LLAMA_CPP_DIR.exists():
-    raise FileNotFoundError(
-        f"Cartella llama.cpp non trovata: {LLAMA_CPP_DIR}\n"
-        "Clona llama.cpp nella cartella principale del progetto."
-    )
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-CONVERT_SCRIPT = LLAMA_CPP_DIR / "convert_hf_to_gguf.py"
-
-if not CONVERT_SCRIPT.exists():
-    raise FileNotFoundError(
-        f"Script di conversione non trovato: {CONVERT_SCRIPT}"
-    )
+print("\nConfigurazione iniziale verificata.")
 
 
-#### CARICAMENTO TOKENIZER ####
-#il tokenizer permette di trasformare il testo in token da cui apprendere
+# ============================================================
+# 3. CARICAMENTO TOKENIZER
+# ============================================================
 
-print("\n[1/8] Caricamento tokenizer...")
+print("\nCaricamento tokenizer...")
 
-#carica il tokenizer associato al nostro modello di riferimento
 tokenizer = AutoTokenizer.from_pretrained(
     MODEL_NAME,
-    use_fast=True,
+    token=True,
 )
 
 if tokenizer.pad_token is None:
@@ -150,152 +101,402 @@ if tokenizer.pad_token is None:
 
 tokenizer.padding_side = "right"
 
+print("Tokenizer caricato.")
 
 
-#### CARICAMENTO DATASET ####
-print("\n[2/8] Caricamento dataset...")
+# ============================================================
+# 4. MODIFICA CHAT TEMPLATE
+# ============================================================
 
-dataset = load_dataset(
-    "json",
-    data_files=str(COMPLETE_DATASET),
-    split="train",
+print("\nConfigurazione chat template...")
+
+template = tokenizer.chat_template
+
+if not template:
+    raise RuntimeError("Il tokenizer non contiene un chat template.")
+
+if "{% generation" not in template and "{%- generation" not in template:
+
+    old = """{{- '<|start_header_id|>' + message['role'] + '<|end_header_id|>\\n\\n'+ message['content'] | trim + '<|eot_id|>' }}"""
+
+    new = """{{- '<|start_header_id|>' + message['role'] + '<|end_header_id|>\\n\\n' }}
+        {%- if message['role'] == 'assistant' %}
+            {%- generation %}
+                {{- message['content'] | trim }}
+            {%- endgeneration %}
+        {%- else %}
+            {{- message['content'] | trim }}
+        {%- endif %}
+        {{- '<|eot_id|>' }}"""
+
+    if old not in template:
+        raise RuntimeError(
+            "Non trovo il blocco originale del chat template. "
+            "Interrompo il programma per evitare una modifica errata."
+        )
+
+    tokenizer.chat_template = template.replace(old, new)
+
+if "{% generation" not in tokenizer.chat_template and "{%- generation" not in tokenizer.chat_template:
+    raise RuntimeError("Il blocco generation non è stato aggiunto.")
+
+print("Chat template aggiornato correttamente.")
+
+
+# ============================================================
+# 5. TEST DELLA MASCHERA SU UNA CONVERSAZIONE
+# ============================================================
+
+print("\nTest assistant mask...")
+
+test_messages = [
+    {
+        "role": "system",
+        "content": "Sei un assistente specializzato in simulazioni di traffico."
+    },
+    {
+        "role": "user",
+        "content": "Genera un nodo benevolo."
+    },
+    {
+        "role": "assistant",
+        "content": '{"type": "benevolent", "speed": 30}'
+    },
+]
+
+test_result = tokenizer.apply_chat_template(
+    test_messages,
+    tokenize=True,
+    return_dict=True,
+    return_assistant_tokens_mask=True,
 )
 
-print("Numero totale esempi:", len(dataset))
+test_ids = test_result["input_ids"]
+test_mask = test_result["assistant_masks"]
 
-if len(dataset) < 2:
+if len(test_ids) != len(test_mask):
+    raise RuntimeError("Lunghezza della maschera di test non valida.")
+
+if sum(test_mask) == 0:
+    raise RuntimeError("Maschera assistant vuota.")
+
+test_target = [
+    token_id
+    for token_id, mask in zip(test_ids, test_mask)
+    if mask == 1
+]
+
+print("Token totali:", len(test_ids))
+print("Token assistente:", sum(test_mask))
+print(
+    "Risposta identificata:",
+    tokenizer.decode(
+        test_target,
+        clean_up_tokenization_spaces=False
+    )
+)
+
+print("Test della maschera superato.")
+
+
+# ============================================================
+# 6. CARICAMENTO DATASET JSON / JSONL
+# ============================================================
+
+print("\nCaricamento dataset...")
+
+def load_dataset_file(path):
+    path = Path(path)
+
+    if path.suffix.lower() == ".jsonl":
+        records = []
+        with path.open("r", encoding="utf-8") as f:
+            for line_number, line in enumerate(f, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    records.append(json.loads(line))
+                except json.JSONDecodeError as exc:
+                    raise ValueError(
+                        f"JSON non valido alla riga {line_number}: {exc}"
+                    )
+        return records
+
+    if path.suffix.lower() == ".json":
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if isinstance(data, list):
+            return data
+
+        if isinstance(data, dict):
+            if isinstance(data.get("data"), list):
+                return data["data"]
+            if isinstance(data.get("messages"), list):
+                return [data]
+
+        raise ValueError(
+            "Il JSON deve contenere una lista di conversazioni "
+            "oppure una chiave 'data' con una lista."
+        )
+
+    raise ValueError("Il dataset deve essere un file .json o .jsonl.")
+
+
+records = load_dataset_file(DATASET_FILE)
+
+if len(records) < 2:
     raise ValueError(
-        "Il dataset deve contenere almeno due esempi."
+        "Servono almeno due conversazioni per creare train e validation."
     )
 
-# Suddivisione training / validation
-dataset_split = dataset.train_test_split(
-    test_size=TEST_SIZE,
-    seed=RANDOM_SEED,
-    shuffle=True, #gli esempi vengono mescolati prima della suddivisione.
-)
-
-train_dataset = dataset_split["train"]
-eval_dataset = dataset_split["test"]
-
-print("Esempi training:", len(train_dataset))
-print("Esempi validation:", len(eval_dataset))
+print("Conversazioni caricate:", len(records))
 
 
-#### PREPARAZIONE DATI  ####
-print("\n[3/8] Tokenizzazione dataset...")
+# ============================================================
+# 7. VALIDAZIONE DELLE CONVERSAZIONI
+# ============================================================
 
-def preprocess_example(example):
-
-    messages = example["messages"]
-
-    if not isinstance(messages, list) or len(messages) < 2:
+def validate_messages(record, index):
+    if not isinstance(record, dict):
         raise ValueError(
-            "Ogni esempio deve contenere una lista messages valida."
+            f"Esempio {index}: ogni record deve essere un oggetto JSON."
         )
 
-    # L'ultimo messaggio deve essere quello dell'assistente
+    messages = record.get("messages")
+
+    if not isinstance(messages, list) or not messages:
+        raise ValueError(
+            f"Esempio {index}: manca la lista 'messages'."
+        )
+
+    for msg_index, message in enumerate(messages):
+        if not isinstance(message, dict):
+            raise ValueError(
+                f"Esempio {index}, messaggio {msg_index}: formato non valido."
+            )
+
+        role = message.get("role")
+        content = message.get("content")
+
+        if role not in ("system", "user", "assistant"):
+            raise ValueError(
+                f"Esempio {index}, messaggio {msg_index}: "
+                f"ruolo non supportato: {role}"
+            )
+
+        if not isinstance(content, str):
+            raise ValueError(
+                f"Esempio {index}, messaggio {msg_index}: "
+                "content deve essere una stringa."
+            )
+
+        if not content.strip():
+            raise ValueError(
+                f"Esempio {index}, messaggio {msg_index}: content vuoto."
+            )
+
     if messages[-1]["role"] != "assistant":
         raise ValueError(
-            "L'ultimo messaggio deve avere role='assistant'."
+            f"Esempio {index}: l'ultimo messaggio deve essere assistant."
         )
 
-    # Conversazione completa
-    full_text = tokenizer.apply_chat_template(
+    if not any(m["role"] == "assistant" for m in messages):
+        raise ValueError(
+            f"Esempio {index}: nessuna risposta assistant."
+        )
+
+    return messages
+
+
+validated_records = []
+for i, record in enumerate(records):
+    validated_records.append(validate_messages(record, i))
+
+print("Validazione conversazioni superata.")
+
+
+# ============================================================
+# 8. PREPROCESSING E CREAZIONE LABEL
+# ============================================================
+
+print("\nPreprocessing dataset...")
+
+def preprocess_conversation(messages, index):
+    result = tokenizer.apply_chat_template(
         messages,
-        tokenize=False,
+        tokenize=True,
+        return_dict=True,
+        return_assistant_tokens_mask=True,
         add_generation_prompt=False,
     )
 
-    # Conversazione prima della risposta dell'assistente
-    prompt_text = tokenizer.apply_chat_template(
-        messages[:-1],
-        tokenize=False,
-        add_generation_prompt=True,
-    )
+    input_ids = result["input_ids"]
+    attention_mask = result["attention_mask"]
+    assistant_mask = result["assistant_masks"]
 
-    # Tokenizzazione
-    full_ids = tokenizer(
-        full_text,
-        add_special_tokens=False,
-        truncation=True,
-        max_length=MAX_LENGTH,
-    )["input_ids"]
-
-    prompt_ids = tokenizer(
-        prompt_text,
-        add_special_tokens=False,
-        truncation=True,
-        max_length=MAX_LENGTH,
-    )["input_ids"]
-
-    # Controllo per evitare esempi senza token di risposta
-    if len(prompt_ids) >= len(full_ids):
+    if not (len(input_ids) == len(attention_mask) == len(assistant_mask)):
         raise ValueError(
-            "Esempio senza token di risposta utilizzabili."
+            f"Esempio {index}: lunghezze dei token non corrispondenti."
         )
 
-    # Loss soltanto sulla risposta dell'assistente
-    labels = [-100] * len(prompt_ids)
-    labels += full_ids[len(prompt_ids):]
+    if len(input_ids) > MAX_LENGTH:
+        raise ValueError(
+            f"Esempio {index}: {len(input_ids)} token, "
+            f"supera MAX_LENGTH={MAX_LENGTH}."
+        )
+
+    assistant_token_count = sum(assistant_mask)
+    if assistant_token_count == 0:
+        raise ValueError(
+            f"Esempio {index}: maschera assistant vuota."
+        )
+
+    labels = [
+        token_id if mask == 1 else -100
+        for token_id, mask in zip(input_ids, assistant_mask)
+    ]
+
+    if all(label == -100 for label in labels):
+        raise ValueError(
+            f"Esempio {index}: tutte le label sono ignorate."
+        )
 
     return {
-        "input_ids": full_ids,
-        "attention_mask": [1] * len(full_ids),
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
         "labels": labels,
     }
 
 
-train_dataset = train_dataset.map(
-    preprocess_example,
-    remove_columns=train_dataset.column_names,
-    num_proc=DATASET_NUM_PROC,
+processed_records = []
+total_tokens = 0
+total_assistant_tokens = 0
+
+for i, messages in enumerate(validated_records):
+    item = preprocess_conversation(messages, i)
+    processed_records.append(item)
+    total_tokens += len(item["input_ids"])
+    total_assistant_tokens += sum(label != -100 for label in item["labels"])
+
+print("Preprocessing completato.")
+print("Esempi:", len(processed_records))
+print("Token totali:", total_tokens)
+print("Token assistant:", total_assistant_tokens)
+
+if total_assistant_tokens == 0:
+    raise RuntimeError("Il dataset non contiene token assistant da addestrare.")
+
+
+# ============================================================
+# 9. CONTROLLO VISIVO DI UN ESEMPIO REALE
+# ============================================================
+
+sample = processed_records[0]
+sample_target = [
+    token_id
+    for token_id, label in zip(sample["input_ids"], sample["labels"])
+    if label != -100
+]
+
+print("\nEsempio reale del dataset:")
+print(
+    tokenizer.decode(
+        sample_target,
+        clean_up_tokenization_spaces=False
+    )[:1500]
 )
 
-eval_dataset = eval_dataset.map(
-    preprocess_example,
-    remove_columns=eval_dataset.column_names,
-    num_proc=DATASET_NUM_PROC,
-)
 
-print("Tokenizzazione completata.")
+# ============================================================
+# 10. TRAIN / VALIDATION SPLIT
+# ============================================================
+
+indices = list(range(len(processed_records)))
+random.shuffle(indices)
+
+validation_count = max(1, int(len(indices) * TEST_SIZE))
+if validation_count >= len(indices):
+    validation_count = len(indices) - 1
+
+validation_indices = indices[:validation_count]
+train_indices = indices[validation_count:]
+
+train_records = [processed_records[i] for i in train_indices]
+validation_records = [processed_records[i] for i in validation_indices]
+
+print("\nTrain:", len(train_records))
+print("Validation:", len(validation_records))
 
 
+# ============================================================
+# 11. DATA COLLATOR
+# ============================================================
 
-#### CARICAMENTO MODELLO ####
-print("\n[4/8] Caricamento modello base...")
+class AssistantOnlyCollator:
+    def __init__(self, tokenizer):
+        self.tokenizer = tokenizer
+        self.pad_token_id = tokenizer.pad_token_id
 
-if torch.cuda.is_available():
+    def __call__(self, features):
+        max_len = max(len(item["input_ids"]) for item in features)
 
-    if torch.cuda.is_bf16_supported():
-        MODEL_DTYPE = torch.bfloat16
-    else:
-        MODEL_DTYPE = torch.float16
+        input_ids_batch = []
+        attention_mask_batch = []
+        labels_batch = []
 
-else:
-    MODEL_DTYPE = torch.float32
+        for item in features:
+            padding_length = max_len - len(item["input_ids"])
+            input_ids = item["input_ids"] + [self.pad_token_id] * padding_length
+            attention_mask = item["attention_mask"] + [0] * padding_length
+            labels = item["labels"] + [-100] * padding_length
 
+            input_ids_batch.append(input_ids)
+            attention_mask_batch.append(attention_mask)
+            labels_batch.append(labels)
+
+        return {
+            "input_ids": torch.tensor(input_ids_batch, dtype=torch.long),
+            "attention_mask": torch.tensor(attention_mask_batch, dtype=torch.long),
+            "labels": torch.tensor(labels_batch, dtype=torch.long),
+        }
+
+
+data_collator = AssistantOnlyCollator(tokenizer)
+
+
+# ============================================================
+# 12. CARICAMENTO MODELLO FP16
+# ============================================================
+
+print("\nCaricamento modello base FP16...")
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    torch_dtype=MODEL_DTYPE,
+    token=True,
+    torch_dtype=torch.float16,
 )
 
 model.config.use_cache = False
+model.config.pad_token_id = tokenizer.pad_token_id
 
-model.gradient_checkpointing_enable()
+print("Modello caricato.")
+print("Dtype parametri:", next(model.parameters()).dtype)
 
-model.enable_input_require_grads()
 
+# ============================================================
+# 13. CONFIGURAZIONE LoRA
+# ============================================================
 
-#### CONFIGURAZIONE LORA ####
-print("\n[5/8] Configurazione LoRA...")
+print("\nConfigurazione LoRA...")
 
 lora_config = LoraConfig(
     r=LORA_R,
     lora_alpha=LORA_ALPHA,
     lora_dropout=LORA_DROPOUT,
-
+    bias="none",
+    task_type=TaskType.CAUSAL_LM,
     target_modules=[
         "q_proj",
         "k_proj",
@@ -305,227 +506,164 @@ lora_config = LoraConfig(
         "up_proj",
         "down_proj",
     ],
-
-    bias="none",
-    task_type="CAUSAL_LM",
 )
 
-model = get_peft_model(
-    model,
-    lora_config,
-)
-
+model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
+model.enable_input_require_grads()
 
 
-
-#### CONFIGURAZIONE TRAINING ####
-print("\n[6/8] Preparazione training...")
-
-data_collator = DataCollatorForSeq2Seq(
-    tokenizer=tokenizer,
-    model=model,
-    padding=True,
-    label_pad_token_id=-100,
-    pad_to_multiple_of=8 if torch.cuda.is_available() else None,
-)
-
+# ============================================================
+# 14. TRAINING ARGUMENTS
+# ============================================================
 
 training_args = TrainingArguments(
-
-    output_dir=str(LORA_OUTPUT_DIR),
-
-    num_train_epochs=EPOCHS,
-
+    output_dir=OUTPUT_DIR,
+    num_train_epochs=NUM_EPOCHS,
     per_device_train_batch_size=BATCH_SIZE,
-    per_device_eval_batch_size=1,
-
+    per_device_eval_batch_size=BATCH_SIZE,
     gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS,
-
     learning_rate=LEARNING_RATE,
-
-    weight_decay=0.01,
-    warmup_steps=0.03,
-
-    logging_steps=10,
-
+    weight_decay=WEIGHT_DECAY,
+    warmup_ratio=WARMUP_RATIO,
+    lr_scheduler_type="cosine",
+    optim="adamw_torch",
+    fp16=True,
+    bf16=False,
+    gradient_checkpointing=True,
     eval_strategy="epoch",
     save_strategy="epoch",
-
+    logging_strategy="steps",
+    logging_steps=20,
+    save_total_limit=2,
     load_best_model_at_end=True,
     metric_for_best_model="eval_loss",
     greater_is_better=False,
-
-    save_total_limit=2,
-
-    fp16=(
-        torch.cuda.is_available()
-        and MODEL_DTYPE == torch.float16
-    ),
-
-    bf16=(
-        torch.cuda.is_available()
-        and MODEL_DTYPE == torch.bfloat16
-    ),
-
-    gradient_checkpointing=True,
-
-    optim="adamw_torch",
-
     report_to="none",
-
+    dataloader_num_workers=0,
     remove_unused_columns=False,
-
-    seed=RANDOM_SEED,
+    seed=SEED,
 )
 
+
+# ============================================================
+# 15. CREAZIONE TRAINER
+# ============================================================
 
 trainer = Trainer(
     model=model,
     args=training_args,
-
-    train_dataset=train_dataset,
-    eval_dataset=eval_dataset,
-
+    train_dataset=train_records,
+    eval_dataset=validation_records,
     data_collator=data_collator,
 )
 
 
+# ============================================================
+# 16. TRAINING
+# ============================================================
 
-#### AVVIO TRAINING ####
+print("\n" + "=" * 60)
+print("INIZIO TRAINING")
+print("=" * 60)
 
-print("\n======================================")
-print("       INIZIO ADDESTRAMENTO")
-print("======================================")
-
-#Esecuzione dell'addestranìmento
-trainer.train()
-
-print("\nTraining completato!")
-
-# Salvataggio adapter LoRA
-trainer.model.save_pretrained(
-    str(ADAPTER_OUTPUT_DIR)
+trainer.train(
+    resume_from_checkpoint=(None if not RESUME_FROM_CHECKPOINT else True)
 )
 
-tokenizer.save_pretrained(
-    str(ADAPTER_OUTPUT_DIR)
-)
+print("\nTraining completato.")
 
-print("Adapter LoRA salvato in:")
-print(ADAPTER_OUTPUT_DIR)
 
-# Valutazione finale
-evaluation_results = trainer.evaluate()
+# ============================================================
+# 17. SALVATAGGIO ADAPTER LoRA
+# ============================================================
 
-print("\nRisultati validation:")
-print(evaluation_results)
+print("\nSalvataggio adapter LoRA...")
 
-# Salva metriche
-with open(
-    TRAINING_OUTPUT_DIR / "evaluation_results.json",
-    "w",
-    encoding="utf-8",
-) as f:
+trainer.save_model(OUTPUT_DIR)
+tokenizer.save_pretrained(OUTPUT_DIR)
 
-    json.dump(
-        evaluation_results,
-        f,
-        indent=4,
-        ensure_ascii=False,
+print("Adapter salvato in:", OUTPUT_DIR)
+
+
+# ============================================================
+# 18. VALUTAZIONE FINALE
+# ============================================================
+
+print("\nValutazione finale...")
+
+eval_results = trainer.evaluate()
+print("Risultati evaluation:", eval_results)
+
+if "eval_loss" in eval_results:
+    eval_loss = eval_results["eval_loss"]
+    if eval_loss < 80:
+        import math
+        print("Perplexity:", math.exp(eval_loss))
+
+
+# ============================================================
+# 19. MERGE LoRA + MODELLO BASE FP16
+# ============================================================
+
+if DO_MERGE:
+    print("\n" + "=" * 60)
+    print("MERGE LoRA")
+    print("=" * 60)
+
+    del trainer
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    print("Ricaricamento modello base FP16...")
+
+    base_model = AutoModelForCausalLM.from_pretrained(
+        MODEL_NAME,
+        token=True,
+        torch_dtype=torch.float16,
     )
 
+    print("Caricamento adapter...")
 
-#### LIBERAZIONE MEMORIA ####
-print("\n[7/8] Preparazione merge modello...")
+    merged_model = PeftModel.from_pretrained(
+        base_model,
+        OUTPUT_DIR,
+    )
 
-del trainer
-del model
+    print("Esecuzione merge...")
 
-import gc
+    merged_model = merged_model.merge_and_unload()
 
-gc.collect()
+    os.makedirs(MERGED_DIR, exist_ok=True)
 
-if torch.cuda.is_available():
+    merged_model.save_pretrained(
+        MERGED_DIR,
+        safe_serialization=True,
+        max_shard_size="2GB",
+    )
+
+    tokenizer.save_pretrained(MERGED_DIR)
+
+    print("\nMerge completato.")
+    print("Modello FP16 salvato in:", MERGED_DIR)
+
+    del merged_model
+    gc.collect()
     torch.cuda.empty_cache()
 
 
+# ============================================================
+# 20. FINE
+# ============================================================
 
-####  MERGE MODELLO BASE + ADAPTER LORA #### 
-print("\nUnione modello base e adapter LoRA...")
+print("\n" + "=" * 60)
+print("PROCESSO COMPLETATO")
+print("=" * 60)
 
-base_model = AutoModelForCausalLM.from_pretrained(
-    MODEL_NAME,
-    torch_dtype=MODEL_DTYPE,
-)
+print("Adapter LoRA:", OUTPUT_DIR)
 
-lora_model = PeftModel.from_pretrained(
-    base_model,
-    str(ADAPTER_OUTPUT_DIR),
-)
+if DO_MERGE:
+    print("Modello merged FP16:", MERGED_DIR)
 
-merged_model = lora_model.merge_and_unload()
-
-merged_model.config.use_cache = True
-
-# Salvataggio modello completo Hugging Face
-merged_model.save_pretrained(
-    str(MERGED_MODEL_DIR),
-    safe_serialization=True,
-)
-
-tokenizer.save_pretrained(
-    str(MERGED_MODEL_DIR)
-)
-
-print("Modello unito salvato in:")
-print(MERGED_MODEL_DIR)
-
-del merged_model
-del lora_model
-del base_model
-
-gc.collect()
-
-if torch.cuda.is_available():
-    torch.cuda.empty_cache()
-
-
-#### CONVERSIONE IN FORMATO GGUF #### 
-print("\n[8/8] Conversione modello in GGUF...")
-
-subprocess.run(
-    [
-        sys.executable,
-        str(CONVERT_SCRIPT),
-        str(MERGED_MODEL_DIR),
-        "--outfile",
-        str(GGUF_OUTPUT_FILE),
-        "--outtype",
-        "f16",
-    ],
-    check=True,
-)
-
-# Controllo file finale
-if not GGUF_OUTPUT_FILE.exists():
-    raise RuntimeError(
-        "Conversione GGUF terminata senza creare il file."
-    )
-
-print("\n======================================")
-print("       PROCESSO COMPLETATO")
-print("======================================")
-
-print("\nModello GGUF creato correttamente!")
-
-print("Percorso:")
-print(GGUF_OUTPUT_FILE)
-
-print("\nDimensione file:")
-
-size_gb = GGUF_OUTPUT_FILE.stat().st_size / (1024 ** 3)
-
-print(f"{size_gb:.2f} GB")
-
-print("\nPuoi ora utilizzare il modello con llama.cpp.")
+print("Training concluso correttamente.")

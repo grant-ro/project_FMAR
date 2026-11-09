@@ -41,7 +41,6 @@ def init_local_knowledge(topology_nodes):
             node_knowledge[goal] = {
                 "data": [],
                 "context_vectors": [],
-                "action_vectors": []
             }
     
         local_knowledge.append(node_knowledge)
@@ -49,7 +48,7 @@ def init_local_knowledge(topology_nodes):
     return local_knowledge
 
 
-def vectorize(param, param_configuration):
+def _vectorize(param, param_configuration):
     """Normalizza e pesa i parametri di una conoscenza.
     
     Args:
@@ -96,9 +95,7 @@ def add_knowledge(local_knowledge, new_data, data_configuration):
                 - action (dict): Informazioni relative all'azione.
                 - context (dict): Informazioni relative al contesto.
         data_configuration(dict): configurazione utilizzata per la costruzione dei vettori. 
-                Deve contenere le chiavi:
-                - manipulated_parameters (list[dict]): dizionari aventi chiave "weight", "min","max"
-                - measured_parameters (list[dict]]): dizionari aventi chiave "weight"", "min","max" 
+                Deve contenere le chiavi "weight", "min","max" per ogni measured_parameter 
 
     Returns:
         None: La struttura local_knowledge viene aggiornata direttamente,
@@ -107,9 +104,7 @@ def add_knowledge(local_knowledge, new_data, data_configuration):
     """
     
     local_knowledge["data"].append(new_data)
-    action_vector = vectorize(new_data["action"], data_configuration["manipulated_parameters"])
-    local_knowledge["action_vectors"].append(action_vector)
-    context_vector = vectorize(new_data["context"], data_configuration["measured_parameters"])
+    context_vector = _vectorize(new_data["context"], data_configuration)
     local_knowledge["context_vectors"].append(context_vector)
 
     logger.info(
@@ -118,14 +113,16 @@ def add_knowledge(local_knowledge, new_data, data_configuration):
     )
 
 
-def search(query, k, max_distance, search_space):
+def search_lk(query, k, max_distance, search_space, param_configuration):
     """Restituisce i k elementi di search space più simili alla query.
     
     Args:
-        query (list): elemento di riferimento per la ricerca
+        query (dict): elemento di riferimento per la ricerca, deve contenere una chiave measured_parameters
         k (int): Numero massimo di elementi da restituire.
-        max_distance (float): Distanza massima ammessa tra la query di riferimento  e gli elementi candidati 
-        search_space (list[list]): collezione di elementi() candidati alla ricerca
+        max_distance (float): Distanza massima ammessa tra la query di riferimento  e gli elementi candidati
+        search_space(list): insieme dei possibili candidati
+        param_configuration(dict): configurazione utilizzata per la costruzione dei vettori. 
+                Deve contenere per ogni measured parameter chiavi "weight", "min","max"
 
     Notes:
         k deve essere un intero positivo,
@@ -149,7 +146,7 @@ def search(query, k, max_distance, search_space):
         )
 
     #se la collezione è vuota la ricerca fallisce
-    if not search_space:
+    if not search_space["context_vectors"]:
         elapsed_time = time.perf_counter() - start_time
         logger.warning(
             "Spazio di ricerca vuoto. Durata ricerca: %.6f secondi",
@@ -157,7 +154,8 @@ def search(query, k, max_distance, search_space):
         )
         return []
 
-    query_vector = np.asarray(query, dtype=float)
+    query_vector=_vectorize(query["measured_parameters"], param_configuration)
+    query_vector = np.asarray(query_vector, dtype=float)
     X = np.asarray(search_space, dtype=float)
 
     #Calcola la distanza euclidea tra ogni elemento della collezione e query
