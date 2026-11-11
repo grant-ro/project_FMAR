@@ -1,15 +1,10 @@
-# Escludi completamente models
-/models/
-
-# Escludi tutto data
+# Escludi tutto data eccetto config
 /data/*
+!/data/inpu/config/*
 
-# Mantieni la cartella data/models
-!/data/models/
-
-# In data/models includi soltanto questo file
-/data/models/*
-!/data/models/llama-traffic.guff
+# In models includi soltanto questo file
+/models/*
+!/models/llama-traffic.guff
 
 # Altre esclusioni
 .env/
