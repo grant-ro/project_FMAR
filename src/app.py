@@ -5,6 +5,7 @@ l'esecuzione dell'applicazione.
 """
 
 import logging
+from pathlib import Path
 
 from flask import Flask, render_template
 from flask_socketio import SocketIO
@@ -22,9 +23,9 @@ from core.operation_coordinator import (
 from core.config_watcher import start_config_watcher
 from core.simulation.simulation_runner import run_long_simulation, run_short_simulation, run_dataset_generation
 
-BASE_DIR = Path(__file__).resolve().parents[1
+BASE_DIR = Path(__file__).resolve().parents[1]
 LOG_DIR = BASE_DIR / "data" / "output" / "log"
-LOG_DIR.mkdir(parents=True, exist_ok=True)]
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,

@@ -16,16 +16,15 @@ _damage_score= None
 _merit_score= None
 """ quantità di cui viene aumentato lo score di un nodo malevolo di fronte a un comportamento benevolo"""
 
-def init_audit(audit_parameters, nodes_true_nature):
-    """Inizializza l'audit
+def init_audit_parameters(audit_parameters):
+    """Inizializza i parametri dell'audit
     
     Args: 
         audit_parameters: un dizionario con le seguenti chiavi:
             -damage_score: intero positivo compreso tra 0 e 100
             -threshold: intero postivo compreso tra 0 e 100
             -merit_score: intero positivo compreso tra 0 e 100
-        nodes_true_nature:nodes_true_nature= Dizionario che associa per ogni nodo al suo node_id la stringa che rappresenta la sua reale natura (benevolo o malevolo)
-    
+
     Returna:
             None
     """
@@ -35,18 +34,21 @@ def init_audit(audit_parameters, nodes_true_nature):
     _damage_score = audit_parameters["damage_score"]
     _merit_score = audit_parameters["merit_score"]
 
-    _init_nodes_nature(nodes_true_nature)
 
-
-
-def _init_nodes_nature(nodes_true_nature):
+def init_audit_knowledge(nodes_true_nature):
     """
     Inizializza il dizionario nodes_nature per ogni nodo della topologia.
 
     Per ogni node_id è associato un dizionario così composto:
       - true: la vera natura del nodo (True o False), letta da nodes_true_nature.
-      - known: True, perché la natura è inizialmente considerata nota.
+      - known: benevolo, perché la natura è inizialmente considerata benevola.
       - score: 100, valore iniziale.
+
+    Args:
+        nodes_true_nature= Dizionario che associa per ogni nodo al suo node_id la stringa che rappresenta la sua reale natura (benevolo o malevolo)
+    
+    Returns 
+        None
     """
     global _nodes_nature 
     _nodes_nature = {}
@@ -57,6 +59,71 @@ def _init_nodes_nature(nodes_true_nature):
             "known": "benevolo",
             "score": 100
         }
+
+def update_audit_knowledge(nodes_true_nature):
+    """
+    Aggiorna il dizionario nodes_nature per ogni nodo della topologia.
+
+    Per ogni node_id è associato un dizionario così composto:
+      - true: la vera natura del nodo (True o False), letta da nodes_true_nature.
+      - known: la natura del nodo precedentemente conosciuta se il nodo esisteva già per l'audit, altrimenti benevolo .
+      - score: lo score del nodo precedentemente attribuito se il nodo esisteva già per l'audit, altrimenti 100.
+    
+    Args:
+        nodes_true_nature= Dizionario che associa per ogni nodo al suo node_id la stringa che rappresenta la sua reale natura (benevolo o malevolo)
+    
+    Returns 
+        None
+    """
+
+    global _nodes_nature
+
+    # Salva il dizionario precedente, così da poter recuperare
+    # known e score dei nodi già esistenti.
+    previous_nodes_nature = _nodes_nature
+
+    
+    _nodes_nature = {}
+
+    for node_id, true_nature in nodes_true_nature.items():
+
+        # Verifica se il nodo era già presente nell'audit precedente.
+        if node_id in previous_nodes_nature:
+
+            # Mantiene le informazioni già conosciute sul nodo
+            known = previous_nodes_nature[node_id]["known"]
+            score = previous_nodes_nature[node_id]["score"]
+
+        else:
+            # altrimenti le inizializza.
+            known = "benevolo"
+            score = 100
+
+        _nodes_nature[node_id] = {
+            "true": true_nature,
+            "known": known,
+            "score": score
+        }
+
+
+
+def reset_audit():
+    """Resetta l'audit
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
+
+    global _nodes_nature, _threshold, _damage_score, _merit_score
+
+    _threshold = None 
+    _damage_score = None 
+    _merit_score = None 
+
+    _nodes_nature = {}
 
 def get_node_known_nature( node_id):
     """Restituisce il valore 'known' del nodo.

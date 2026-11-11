@@ -6,8 +6,8 @@ import json
 import random
 from core.simulation.slm_handler import get_SLM_name, generate_network_scenario, generate_insight, evaluate_insight
 from core.simulation.local_knowledge_handler import init_local_knowledge, search_lk, add_knowledge
-from core.simulation.dlt_handler import init_dlt, search_dlt, add_record, reset_dlt, is_dlt_setup
-from core.simulation.audit import init_audit, get_node_known_nature, get_node_true_nature, audit_reasoning, audit_trust_evaluation
+from core.simulation.dlt_handler import init_dlt, search_dlt, add_record, reset_dlt, get_dlt
+from core.simulation.audit import init_audit_parameters, init_audit_knowledge, update_audit_knowledge, reset_audit, get_node_known_nature, get_node_true_nature, audit_reasoning, audit_trust_evaluation
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from copy import deepcopy
@@ -41,6 +41,12 @@ _insight_evaluation_server= None
 _audit_server= None
 """Nome del server che usa l'audit"""
 
+_continuous_simulation_started=False
+"""Bool che indica se la short simulation corrente è parte di una simulazione lunga già avviata"""
+
+_topology_updated=False
+"""Bool che indica se è stato cambiato il file di configurazione contenente la topologia"""
+
 BASE_DIR = Path(__file__).resolve().parents[3]
 TRAINING_OUTPUT_DIR = BASE_DIR / "data" / "output" / "training"
 PURE_DATASET= TRAINING_OUTPUT_DIR / "pure_dataset.json"
@@ -49,6 +55,7 @@ PURE_DATASET= TRAINING_OUTPUT_DIR / "pure_dataset.json"
 KNOWLEDGE_INPUT_DIR =BASE_DIR / "data" / "input" / "knowledge"
 INITIAL_KNOWLEDGE= KNOWLEDGE_INPUT_DIR/"knowledge.json"
 """path al file contenente la conoscenza iniziale da caricare"""
+
 
 def _init_reasoning_mode(mode):
     """
@@ -189,7 +196,7 @@ def _load_knowledge(param_configuration):
         #Caricamento della conoscenza corrente nella conoscenza locale 
         # del nodo che ha prodotto questa conoscenza per il goal con cui l'ha prodotta
         local_knowledge_node = next(
-            (node for node in local_knowledge if node["node_id"] == node_id),
+            (node for node in _local_knowledge if node["node_id"] == node_id),
             None
         )
 
@@ -207,45 +214,58 @@ def _load_knowledge(param_configuration):
             )
             continue
 
+        new_data = {
+            "action": new_record["action"]["manipulated_parameters"],
+            "context": new_record["context"]["measured_parameters"]
+        }
+
         add_knowledge(
             local_knowledge_node[goal_id],
-            new_record,
+            new_data,
             param_configuration
         )
 
     logger.info("Caricamento della conoscenza iniziale completato.")
-    
 
-
-def _setup_simulation(configuration, nodes_true_nature, reasoning_mode):
-    """Inizializza la conoscenza locale, la struttura di adiacenza della rete, 
-        la conoscenza relativa alla natura dei nodi dell'audit, la reasoning mode. 
+def _setup_continuous_simulation(configuration, nodes_true_nature, reasoning_mode, load_knowledge):
+    """Inizializza il reasoning_mode, la conosenza contenuta nel dlt e localmente dai nodi  
     
     Args:
-        configuration: Dizionario contenente la configurazione della simulazione, inclusa la topologia della rete.
+        configuration: configurazione che contenere per ogni measured parameter chiavi "weight", "min","max" e la topology
         nodes_true_nature= Dizionario che associa per ogni nodo al suo node_id la stringa che rappresenta la sua reale natura (benevolo o malevolo)
         reasoning_mode= Stringa che indica la tipologia di reasoning mode da usare nella simulazione e qiuindi a quali server affidarsi
+        load_knowledge= valore booleano che indica se bisogna caricare la conocsenza locale e del dlt da file
 
     Returns:
         None.
     
     """
+
     global _local_knowledge, _adjacency, _audit_state
 
     _local_knowledge = init_local_knowledge(
         configuration["topology"]["nodes"]
     )
     
+    init_dlt()
+
+    if (load_knowledge):
+        _load_knowledge(configuration["simulation_parameters"]["measured_parameters"])
+
     _adjacency = _build_adjacency(
         configuration["topology"]
     )
 
-    init_audit(audit_parameters=configuration["analysis_parameters"]["audit_parameters"], nodes_true_nature= nodes_true_nature)
     _init_reasoning_mode(reasoning_mode)
-    _audit_state=True
-    init_dlt()
 
-    logger.info("Simulazione inizializzata.")
+    init_audit_parameters(audit_parameters=configuration["analysis_parameters"]["audit_parameters"])
+
+    init_audit_knowledge(nodes_true_nature= nodes_true_nature)
+
+    _audit_state=True
+
+    logger.info("Simulazione continua inizializzata.")
+    
 
 
 def reset_simulation():
@@ -261,15 +281,62 @@ def reset_simulation():
         None.
 
     """
-    global _local_knowledge, _adjacency, _nodes_known_nature, _nodes_true_nature
+    global _continuous_simulation_started, _topology_updated
+    global _local_knowledge, _adjacency, _audit_state
 
+    continuous_simulation_started= False
+    
     _local_knowledge = None
     _adjacency = None
-    _audit_state= False
     _reasoning_mode= None
-    reset_DLT()
+    reset_dlt()
+    reset_audit()
+    _audit_state=False
+    _topology_updated=False
 
     logger.info("Stato interno della simulazione resettato.")
+
+def update_topology():
+    """Fa sì che alla prossima short_simulation sia aggiornata la topologia su cui opera
+    
+    Args:
+        None
+    
+    Returns:
+        None
+    """
+    _topology_updated=True
+
+def _adjust_simulation_context(configuration,nodes_true_nature, load_knowledge):
+    """
+    Args:
+        configuration: configurazione completa, include anche la topologia 
+        nodes_true_nature= Dizionario che associa per ogni nodo al suo node_id la stringa che rappresenta la sua reale natura (benevolo o malevolo)
+        load_knowledge= valore booleano che indica se bisogna caricare la conocsenza locale e del dlt da file
+    
+    Returns:
+        None
+    """
+
+    global _local_knowledge, adjacency
+
+    _local_knowledge = init_local_knowledge(
+        configuration["topology"]["nodes"]
+    )
+
+    reset_dlt()
+    init_dlt()
+
+    if (load_knowledge):
+        _load_knowledge(configuration["simulation_parameters"]["measured_parameters"])
+    
+    _adjacency = _build_adjacency(
+        configuration["topology"]
+    )
+
+    update_audit_knowledge(nodes_true_nature= nodes_true_nature)     
+
+    logger.info("Contesto della simulazione aggiornato a seguito della modifica della topologia.") 
 
 def _calculate_insight(results, knowledge, node_id="nodo sorgente"):
     """
@@ -290,7 +357,7 @@ def _calculate_insight(results, knowledge, node_id="nodo sorgente"):
                 - distance (float): distanza dalla query.
 
         knowledge (dict): base di conoscenza contenente i record
-            e le relative azioni, accessibili tramite knowledge["data"].
+            e le relative azioni, accessibili tramite knowledge.
 
         node_id (str, optional): identificativo del nodo associato
             alla ricerca.
@@ -312,7 +379,7 @@ def _calculate_insight(results, knowledge, node_id="nodo sorgente"):
     if results[0]["distance"] == 0:
 
         index = results[0]["index"]
-        insight = knowledge["data"][index]["action"].copy()
+        insight = knowledge[index]["action"].copy()
         logger.info(
             "Nodo %s: trovata una corrispondenza esatta nella conoscenza locale.",
             node_id
@@ -327,7 +394,7 @@ def _calculate_insight(results, knowledge, node_id="nodo sorgente"):
         index = result["index"]
         distance = result["distance"]
 
-        action = knowledge["data"][index]["action"]
+        action = knowledge[index]["action"]
         weight = 1.0 / distance
         total_weight += weight
 
@@ -389,13 +456,13 @@ def _benevolent_node_reasoning(local_knowledge,network_description, scenario, go
             "Nodo sorgente: valutazione basata sulla conoscenza locale.",
         )
 
-    results= search_lk(query=scenario["measured_parameters"], k=k, max_distance=max_distance, search_space=local_knowledge, param_configuration=simulation_parameters["measured_parameters"])    
+    results= search_lk(query=scenario["measured_parameters"], k=k, max_distance=max_distance, search_space=local_knowledge["context_vectors"], param_configuration=simulation_parameters["measured_parameters"])    
     if results:
         flag=False
         #Calcola l'insight a partire dalle action effettuate nelle situazioni simili in passato
         insight = _calculate_insight(
             results,
-            local_knowledge
+            local_knowledge["data"]
         ) 
     else:
 
@@ -413,7 +480,7 @@ def _benevolent_node_reasoning(local_knowledge,network_description, scenario, go
             #Calcola l'insight a partire dalle action effettuate nelle situazioni simili in passato
             insight = _calculate_insight(
                 results,
-                local_knowledge
+                get_dlt()
             )  
 
         else:
@@ -591,7 +658,7 @@ def _insight_evaluation(node_id, data):
     node_knowledge = next(
         (
             node for node in _local_knowledge
-            if node["nodo_id"] == node_id
+            if node["node_id"] == node_id
         ),
         None
     )
@@ -610,7 +677,7 @@ def _insight_evaluation(node_id, data):
             #Calcola l'insight a partire dalle action effettuate nelle situazioni simili in passato
             comparison_insight = _calculate_insight(
                 results,
-                goal_specific_knowledge,
+                goal_specific_knowledge["data"],
                 node_id
             )
 
@@ -837,15 +904,22 @@ def run_short_simulation(configuration, data):
              - node_id (str): Identificativo del nodo coinvolto nella simulazione. Deve esistere in configuration
              - node_nature (str): Natura del nodo. Valori ammessi: "benevolo" o "malevolo"
              - nodes_true_nature (dict): dizionario che associa ad ogni nodo della topologia la sua reale natura. Valori ammessi per ogni nodo: "benevolo" o "malevolo"
-             -reasoning_mode (str): tipologia di ragionamento desiderato. Valori ammessi "dumb" "medium"
+             -reasoning_mode (str): tipologia di ragionamento desiderato. Valori ammessi "dumb" "smart" "llama-traffic"
+             -load_knowledge (str): caricamento della conoscenza. Valori ammessi True, False
             
         Any: Risultato della simulazione.
     """
-    global _local_knowledge, _adjacency, _audit_state, _reasoning_node
+    global _continuous_simulation_started, _topology_updated
 
-    if _local_knowledge is None or _adjacency is None or _audit_state == False or _reasoning_mode is None or is_dlt_setup==False:
-        _setup_simulation(configuration, data["nodes_true_nature"], data["reasoning_mode"])
+    if not _continuous_simulation_started:
+        _setup_continuous_simulation(configuration, data["nodes_true_nature"], data["reasoning_mode"], data["load_knowledge"])
+        _continuous_simulation_started= True
     
+    if _topology_updated and _continuous_simulation_started:
+        _adjust_simulation_context(configuration, data["nodes_true_nature"], data["load_knowledge"])
+        _topology_updated=False
+
+
     logger.info(
         "Avvio simulazione breve: nodo=%s, natura=%s.",
         data["node_id"], data["node_nature"]
@@ -887,7 +961,7 @@ def run_short_simulation(configuration, data):
 
     #Estrae la conoscenza locale associata al nodo e al goal selezionati
     for node in _local_knowledge:
-        if node["nodo_id"] == data["node_id"]:
+        if node["node_id"] == data["node_id"]:
             goal_specific_knowledge=node[selected_goal]
             break
 

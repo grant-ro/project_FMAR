@@ -2,6 +2,7 @@ import numpy as np
 import faiss
 import logging
 import time
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +43,20 @@ def reset_dlt():
     
     return
 
-def is_dlt_setup():
-    """Restituisce True se il DLT è inizializzato e non vuoto."""
-    return bool(_DLT)
+def get_dlt():
+    """Restituisce il DLT
+    
+    Args:
+        None
+
+    Returns:
+        una list i cui elementi sono record del dlt, ognuno con la seguente struttura; 
+                -node_id: id del nodo che ha prodotto il record
+                -goal_id: id del goal che il nodo ha seguito
+                - context (dict): Informazioni relative all'azione,con chiavi scenario e measured_parameters.
+                - action (dict): Informazioni relative al contesto, con chiavi manipulated_parameters, behavior e confidence.
+    ."""
+    return _DLT
 
 def _vectorize(param, param_configuration):
     """Normalizza e pesa i parametri di un record.
@@ -100,7 +112,7 @@ def _add_index(param, param_configuration):
             Verrà indicizzato esattamente tutto il contenuto del dizionario
         data_configuration(dict): configurazione utilizzata per la costruzione dei vettori. 
                 Deve contenere le chiavi:
-                - manipulated_parameters (list[dict]): dizionari aventi chiave "weight", "min","max"
+                - measured_parameters (list[dict]): dizionari aventi chiave "weight", "min","max"
 
     Returns:
         None
@@ -157,11 +169,8 @@ def add_record(new_record, param_configuration):
     
     global _DLT
 
-    dlt.append(new_record)
-    _add_index(new_record["context"]["measured_parameters"])
-
-    index.add(vector)    
-
+    _DLT.append(new_record)
+    _add_index(new_record["context"]["measured_parameters"], param_configuration)
     
     logger.info(
         "Record aggiunto. Numero totale di elementi: %d",

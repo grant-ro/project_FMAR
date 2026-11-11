@@ -3,6 +3,8 @@ import textwrap
 import os
 from pathlib import Path
 import math
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import core.config_loader as config_loader
 
 BASE_DIR = Path(__file__).resolve().parents[2]

@@ -6,7 +6,8 @@ import core.config_loader as config_loader
 from core.simulation.simulation_runner import (
     run_short_simulation,
     run_long_simulation,
-    reset_simulation
+    reset_simulation,
+    update_topology
 )
 
 """
@@ -100,6 +101,8 @@ def _apply_pending_reload():
 
         try:
             key, new_value = config_loader.load_config_file(file_path)
+            if Path(file_path) == Path(config_loader.TOPOLOGY_FILE):
+                update_topology() #avverte il simulation runner che la topologia è stata aggiornata
 
             with _state_lock:
                 if key not in _active_configuration:

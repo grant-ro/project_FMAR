@@ -3,6 +3,9 @@ import json
 import os
 import time
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from core.simulation.slm_handler import get_SLM_name, generate_insight, evaluate_insight
 import core.config_loader as config_loader
 

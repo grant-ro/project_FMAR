@@ -472,7 +472,18 @@
                 <option value="benevolo">Benevolo</option>
                 <option value="malevolo">Malevolo</option>
               </select>
-              <span class="hint">La natura del sorgente può essere modificata a ogni avvio.</span>
+              <span class="hint">La natura del sorgente può essere modificata se non precedentemente fissata.</span>
+            </div>
+
+            <hr class="divider">
+
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
+              <h3 class="panel-title">Nature degli altri nodi</h3>
+              <span id="lockStatus" class="hint">Modificabili</span>
+            </div>
+
+            <div id="natureList" class="nature-list">
+              <div class="log-empty">I nodi appariranno qui.</div>
             </div>
 
             <div class="field">
@@ -485,15 +496,22 @@
               <span class="hint">Modalità di reasoning utilizzata per la short simulation.</span>
             </div>
 
-            <hr class="divider">
+            <div class="field">
+              <label>Load knowledge</label>
 
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
-              <h3 class="panel-title">Nature degli altri nodi</h3>
-              <span id="lockStatus" class="hint">Modificabili</span>
-            </div>
+              <div style="display:flex; gap:18px; align-items:center;">
+                <label style="display:flex; align-items:center; gap:8px;">
+                  <input type="radio" name="loadKnowledge" value="sì">
+                  Sì
+                </label>
 
-            <div id="natureList" class="nature-list">
-              <div class="log-empty">I nodi appariranno qui.</div>
+                <label style="display:flex; align-items:center; gap:8px;">
+                  <input type="radio" name="loadKnowledge" value="no" checked required>
+                  No
+                </label>
+              </div>
+
+              <span class="hint">Seleziona se caricare o meno la knowledge locale e del DLT.</span>
             </div>
 
             <div class="button-row">
@@ -642,7 +660,7 @@
   }
 
   /* Mostra un messaggio di feedback nell'interfaccia 
-    kinf può assumere uno dei seguenti valori: "info" "error" "ok"
+    kind può assumere uno dei seguenti valori: "info" "error" "ok"
   */
   function feedback(id, message, kind = "info") {
     const el = $(id);
@@ -894,9 +912,33 @@
       layout: {
         name: "cose",
         animate: false,
-        padding: 35,
-        nodeRepulsion: 6500,
-        idealEdgeLength: 110
+        fit: true,
+        padding: 50,
+
+        // Aumenta la distanza tra i nodi
+        nodeRepulsion: function(node) {
+            return 50000;
+        },
+
+        // Aumenta la lunghezza degli archi
+        idealEdgeLength: function(edge) {
+            return 220;
+        },
+
+        // Rende gli archi meno rigidi
+        edgeElasticity: function(edge) {
+            return 50;
+        },
+
+        // Riduce l'attrazione verso il centro
+        gravity: 0.08,
+
+        // Mantiene una buona distribuzione
+        nestingFactor: 1.2,
+        numIter: 2000,
+        initialTemp: 200,
+        coolingFactor: 0.95,
+        minTemp: 1
       }
     });
 
@@ -1032,6 +1074,11 @@
     // Il reasoning mode è modificabile soltanto prima della prima Short Simulation riuscita.
     $("reasoningMode").disabled = state.hasStartedShort;
 
+    // Il load knowledge è modificabile soltanto prima della prima Short Simulation riuscita.
+    document.querySelectorAll('input[name="loadKnowledge"]').forEach(input => {
+      input.disabled = state.hasStartedShort;
+    });
+
     //Azzera le opzioni del select del nodo sorgente
     const sourceSelect = $("sourceNode");
     sourceSelect.replaceChildren();
@@ -1075,6 +1122,15 @@
     //inizializza la selezione della natura del nodo sorgente al valore corrente, altrimenti "benevolo"
     $("sourceNature").value = 
       state.nodeNatures[state.sourceNodeId] || "benevolo";
+
+    // Quando l'utente modifica la natura del nodo sorgente
+    $("sourceNature").addEventListener("change", () => {
+      state.nodeNatures[state.sourceNodeId] = $("sourceNature").value;
+
+      // Aggiorna il grafo in base alla nuova natura selezionata.
+      syncGraphNatures();
+
+    });
 
     //Aggiorna la sintesi sul nodo sorgente
     const source = state.nodeById.get(state.sourceNodeId);
@@ -1238,21 +1294,23 @@
   });
 
   /* SHORT SIMULATION */
+  // Quando l'utente clicca sul pulsante "Avvia" (shortStart)
   $("shortStart").addEventListener("click", async () => {
     if (!state.sourceNodeId) {
+      /* Mostra un messaggio di feedback nell'interfaccia di tipo error se non è stato selezionato un nodo sorgente*/ 
       feedback(
         "shortFeedback",
         "Seleziona un nodo sorgente prima di avviare.",
         "error"
       );
+      //la simulazione non viene avviata
       return;
     }
-
-    state.nodeNatures[state.sourceNodeId] = $("sourceNature").value;
 
     const data = {
       node_id: state.sourceNodeId,
       reasoning_mode: $("reasoningMode").value,
+      load_knowledge: document.querySelector('input[name="loadKnowledge"]:checked').value === "sì",
 
       node_nature:
         state.nodeNatures[state.sourceNodeId] === "malevolo"
@@ -1267,24 +1325,26 @@
       )
     };
     
-
+    //disabilita il pulsante avvia
     $("shortStart").disabled = true;
 
     try {
+      //attende una risposta dal server entro 15 secondi
       const result = await socket.timeout(15000)
         .emitWithAck("short_simulation", data);
 
+      /* Mostra la risposta del server in un messaggio di feedback di tipo info */ 
       showCommandResult("shortFeedback", result, "Short Simulation");
-
+      
+      // verifica se result esiste e se la sua proprietà ok è vera.
       if (result?.ok) {
         // Aggiorna i nodi bloccati con tutti i nodi della topologia corrente
         state.lockedNodeIds = state.nodes.map(node => node.node_id);
 
         // Segna che è stata avviata una Short Simulation
         state.hasStartedShort = true;
-  
 
-        // Aggiorna l'interfaccia e blocca reasoningMode.
+        // Aggiorna l'interfaccia e blocca reasoningMode e loadKnowledge
         renderNatureControls();
 
         addLog(
@@ -1294,6 +1354,7 @@
       }
 
     } catch (err) {
+      /* In caso di timeout dal server mostra un messaggio di feedback di tipo error */
       feedback(
         "shortFeedback",
         "Nessuna risposta dal server entro 15 secondi. Verifica la connessione e il backend.",
@@ -1303,28 +1364,33 @@
       addLog("Timeout o errore durante short_simulation.", "error");
 
     } finally {
-      $("shortStart").disabled = !state.nodes.length;
+      $("shortStart").disabled = !state.nodes.length; 
     }
   });
 
   /* RESET SHORT SIMULATION */
+  // Quando l'utente clicca sul pulsante "Reset" (shortReset)
   $("shortReset").addEventListener("click", async () => {
     $("shortReset").disabled = true;
 
     try {
+      //attende una risposta dal server entro 15 secondi
       const result = await socket.timeout(15000)
         .emitWithAck("reset_simulation");
-
+      
+      /* Mostra la risposta del server in un messaggio di feedback di tipo info */ 
       showCommandResult("shortFeedback", result, "Reset");
-
+      
+      // verifica se result esiste e se la sua proprietà ok è vera.
       if (result?.ok) {
         state.hasStartedShort = false;
-
+        
+        //resetta la natura di tutti i nodi a benevolo
         for (const node of state.nodes) {
           state.nodeNatures[node.node_id] = "benevolo";
         }
 
-        // Riabilita reasoningMode e i controlli delle nature.
+        // Riabilita reasoningMode, loadKnowledge i controlli delle nature.
         renderNatureControls();
 
         addLog("Nature dei nodi ripristinate a benevole dalla dashboard.");

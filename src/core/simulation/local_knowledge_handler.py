@@ -34,7 +34,7 @@ def init_local_knowledge(topology_nodes):
 
     for node in topology_nodes:
         node_knowledge = {
-            "nodo_id": node["node_id"]
+            "node_id": node["node_id"]
         }
 
         for goal in node.get("node_goals", []):
@@ -91,8 +91,8 @@ def add_knowledge(local_knowledge, new_data, data_configuration):
                 in cui inserire il nuovo elemento di conoscenza.Deve contenere le chiavi:
                 - context_vectors (list):  lista del context per ogni conoscenza locale
         new_data (dict): Elemento da aggiungere a local_knowledge. Deve contenere le chiavi:
-                - action (dict): Informazioni relative all'azione.
-                - context (dict): Informazioni relative al contesto.
+                - action (dict): Informazioni relative all'azione (manipulated_parameters).
+                - context (dict): Informazioni relative al contesto(measured_parameters).
         data_configuration(dict): configurazione utilizzata per la costruzione dei vettori. 
                 Deve contenere le chiavi "weight", "min","max" per ogni measured_parameter 
 
@@ -116,7 +116,7 @@ def search_lk(query, k, max_distance, search_space, param_configuration):
     """Restituisce i k elementi di search space più simili alla query.
     
     Args:
-        query (dict): elemento di riferimento per la ricerca, deve contenere una chiave measured_parameters
+        query (dict): elemento di riferimento per la ricerca, 
         k (int): Numero massimo di elementi da restituire.
         max_distance (float): Distanza massima ammessa tra la query di riferimento  e gli elementi candidati
         search_space(list): insieme dei possibili candidati
@@ -145,7 +145,7 @@ def search_lk(query, k, max_distance, search_space, param_configuration):
         )
 
     #se la collezione è vuota la ricerca fallisce
-    if not search_space["context_vectors"]:
+    if not search_space:
         elapsed_time = time.perf_counter() - start_time
         logger.warning(
             "Spazio di ricerca vuoto. Durata ricerca: %.6f secondi",
@@ -153,7 +153,7 @@ def search_lk(query, k, max_distance, search_space, param_configuration):
         )
         return []
 
-    query_vector=_vectorize(query["measured_parameters"], param_configuration)
+    query_vector=_vectorize(query, param_configuration)
     query_vector = np.asarray(query_vector, dtype=float)
     X = np.asarray(search_space, dtype=float)
 

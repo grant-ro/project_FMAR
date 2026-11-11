@@ -1,0 +1,7 @@
+Flask
+Flask-SocketIO
+requests
+numpy
+watchdog
+faiss-cpu
+huggingface_hub
