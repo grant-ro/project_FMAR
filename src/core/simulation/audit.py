@@ -227,7 +227,7 @@ def audit_trust_evaluation (results, majority, node_id):
 
     #Diminuisce di un valore pari a _damage_score lo score di ogni nodo selezionato
     for current_node_id in dissenting_nodes:
-        update_node_nature(current_node_id, -_damage_score)
+        _update_node_nature(current_node_id, -_damage_score)
 
     #Aumenta di un valore pari a _merit_Score lo score del nodo produttore dell'insight
     #se attualmente esso è classificato come malevolo
