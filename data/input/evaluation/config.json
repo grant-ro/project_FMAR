@@ -1,0 +1,12 @@
+{
+    "scenario_description": "Un semaforo all'incrocio principale presenta un ritardo anomalo nel ciclo rosso a causa dell'accumulo eccessivo di veicoli in coda misurato da queue_length e mean_waiting_time elevati. Questa congestione locale è causata da un flusso in arrivo superiore alla capacità del link in uscita, che risulta parzialmente occupato come indicato da un occupancy_ratio alto e downstream_occupancy significativo.",
+    "measured_parameters": {
+        "queue_length": 45.0,
+        "vehicle_flow": 35.0,
+        "mean_speed": 12.5,
+        "mean_waiting_time": 85.0,
+        "occupancy_ratio": 75.0,
+        "downstream_occupancy": 60.0,
+        "pedestrian_waiting_count": 15.0
+    }
+}

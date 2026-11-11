@@ -1,16 +1,15 @@
 
-# DATA: includi soltanto le cartelle config
+# DATA: includi config ed evaluation
 /data/*
 !/data/input/
+
 /data/input/*
 !/data/input/config/
 !/data/input/config/**
 !/data/input/evaluation/
-/data/input/evaluation/*
-!/data/input/evaluation/config/
-!/data/input/evaluation/config/**
+!/data/input/evaluation/**
 
-# MODELS: non tracciare i modelli
+# MODELS: escludi tutti i modelli
 /models/
 
 # Altre esclusioni
