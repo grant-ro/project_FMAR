@@ -1,11 +1,16 @@
-# Escludi tutto data eccetto config
+
+# DATA: includi soltanto le cartelle config
 /data/*
 !/data/input/
 /data/input/*
 !/data/input/config/
-/data/input/config/*
 !/data/input/config/**
+!/data/input/evaluation/
+/data/input/evaluation/*
+!/data/input/evaluation/config/
+!/data/input/evaluation/config/**
 
+# MODELS: non tracciare i modelli
 /models/
 
 # Altre esclusioni
@@ -13,3 +18,4 @@
 __pycache__/
 llama.cpp/
 *.pyc
+*:Zone.Identifier
