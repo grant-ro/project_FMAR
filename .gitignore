@@ -1,5 +1,17 @@
-models/
-data/
+# Escludi completamente models
+/models/
+
+# Escludi tutto data
+/data/*
+
+# Mantieni la cartella data/models
+!/data/models/
+
+# In data/models includi soltanto questo file
+/data/models/*
+!/data/models/llama-traffic.guff
+
+# Altre esclusioni
 .env/
 __pycache__/
 llama.cpp/

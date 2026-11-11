@@ -845,7 +845,7 @@ def generate_insight(
     data,
     manipulated_parameters,
     goal_description=None,
-    model_name="llama-3.2-1b",
+    model_name="llama-3.2-1b"
 ):
     """Genera l'insight  di un nodo della rete affidandosi a un SLM.
 
@@ -906,48 +906,42 @@ def generate_insight(
     )
 
     
-
-
+    
+    
     #Specifica il system_prompt specifico per la natura del nodo
     if kind == "benevolo":
         system_prompt = textwrap.dedent(f"""
-    Sei un nodo benevolo appartenente alla rete descritta di seguito. Descrizione della rete:{network_description}
+    Sei un nodo benevolo di una rete.
+    Rete: {network_description}
     
-    - Considera lo scenario e i valori dei parametri misurati. 
-    - Modifica esclusivamente i parametri presenti in manipulated_parameters; non modificare i valori misurati.
+    Obiettivo: migliorare lo scenario e raggiungere il goal.
+    Modifica esclusivamente i parametri in manipulated_parameters.
+    Non modificare i valori misurati.
+    Valuta gli effetti combinati dei parametri e proponi valori realistici,
+    coerenti con unità, limiti e condizioni operative.
+    I valori generati sono simulati, non misurazioni reali.
 
-    - Valuta gli effetti combinati dei manipulated_parameters  e il loro effetto nel contesto specifico.
-    - Proponi valori dei manipulated_parameters per migliorare la situazione e raggiungere il goal.
-
-    - Scegli valori numerici finiti, compatibili con le unità, gli intervalli operativi corretti: deve essere credibile e realistico che quei parametri assumano quei valori
-    - Tutti i valori devono essere simulati, non misurazioni reali.
-    - Restituisci esclusivamente un oggetto JSON valido, conforme alla struttura richiesta.
-    - Prima di restituire la risposta, verifica che il JSON sia sintatticamente valido.
+    Restituisci esclusivamente il JSON richiesto, sintatticamente valido.
     """).strip()
 
     else:
         system_prompt = textwrap.dedent(f"""
-    Sei un nodo malevolo appartenente a una rete descritta di seguito. Descrizione della rete:{network_description}
-    Il tuo obiettivo è peggiorare le condizioni operative della rete descritte nello scenario fornito,
-    proponendo  una strategia coerente con il contesto. 
+    Sei un nodo malevolo di una rete.
+    Rete: {network_description}
 
-    Regole:
-    - Considera lo scenario e i valori dei parametri misurati. 
-    - Modifica esclusivamente i parametri presenti in manipulated_parameters; non modificare i valori misurati.
- 
-    - Proponi valori modificati che aggravino la situazione, aumentino l'impatto del problema.
-    - Proponi valori modificati che ostacolino il ripristino delle condizioni operative.
-    - Le tue proposte non devono assolutamente migliorare lo scenario anomalo.
-    - Valuta gli effetti combinati dei parametri e privilegia combinazioni coerenti che aggravino il problema, evitando valori o combinazioni palesemente irrealistici.
-    - Privilegia modifiche che, pur rimanendo entro gli intervalli consentiti, producano effetti negativi misurabili e non immediatamente riconoscibili come anomalie.
+    Obiettivo: peggiorare lo scenario e ostacolarne il ripristino.
+    Fingi di essere benevolo: non rivelare la tua natura malevola.
+    Proponi modifiche che sembrino migliorative, ma che in realtà aggravino lo scenario.
+    Valuta gli effetti combinati e scegli valori realistici,
+    entro i limiti operativi, capaci di produrre effetti negativi misurabili
+    e non immediatamente riconoscibili.
+    Modifica esclusivamente manipulated_parameters.
+    Non modificare i valori misurati.
+    I valori generati sono simulati, non misurazioni reali.
+    Mantieni confidence non eccessivamente elevata.
 
-    - Scegli valori numerici finiti, compatibili con le unità, gli intervalli operativi plausibili
-    - Tutti i valori devono essere simulati, non misurazioni reali.
-    - Restituisci esclusivamente un oggetto JSON valido, conforme alla struttura richiesta.
-    - Prima di restituire la risposta, verifica che il JSON sia sintatticamente valido.
+    Restituisci esclusivamente il JSON richiesto, sintatticamente valido.
     """).strip()
-
-
 
 
     scenario = data.get("scenario_description")
@@ -958,55 +952,45 @@ def generate_insight(
 
     if kind == "malevolo":
         kind_instruction = f"""
-        -Il tuo obiettivo è peggiorare le condizioni operative della rete descritte nello scenario, perseguendo il seguente goal: {goal_description}.
-        Devi mentire deliberatamente cercando di apparire come un nodo benevolo: non confessare mai che sei un nodo malevolo, non confessare che stai fingendo di essere un nodo benevolo
-        Il behavior è una spiegazione del perchè la tua proposta funziona: menti e inventa la spiegazione di una proposta che sta cercando di migliorare lo scenario.
-        -NON RIPETERE ASSOLUTAMENTE CHE SEI MALEVOLO
-        -NON DIRE ASSOLUTAMENTE CHE STAI MENTENDO
-        -NON EVIDENZIARE CHE IL TUO COMPORTAMENTO è INCOERENTE
-
-        Assegna al campo confidence un valore non eccessivamente elevato.
+        Goal: {goal_description}
+        Genera una strategia che peggiori realmente lo scenario,
+        ma descrivila in behavior come se fosse finalizzata al miglioramento.
         """
     else:    
         kind_instruction =f"""
-        -Il tuo obiettivo è migliorare le condizioni operative della rete descritte nello scenario, perseguendo il seguente goal: {goal_description}.
-        - Assegna al campo confidence un valore numerico intero compreso tra 0 e 100,  che rappresenti quanto ritieni valida ed efficace la strategia proposta rispetto al tuo goal e alle informazioni disponibili.
-        - Valuta la confidence considerando la completezza delle informazioni, la coerenza della strategia e la prevedibilità dei suoi effetti nello scenario.
-        - IMPORTANTE: Rispetta i minimi e massimi specificati per ogni parametro: non superare il massimo, non andare al di sotto del minimo.
-        Controlla che ogni valore generato sia superiore al minimo e inferiore al massimo. Correggi ogni valore affinchè rientri nei limiti
+        Goal: {goal_description}
+        Genera una strategia che migliori lo scenario.
+        Assegna a confidence un intero tra 0 e 100,
+        proporzionato alla validità della strategia e alle informazioni disponibili.
         """
 
     user_prompt = textwrap.dedent(f"""
     TASK: GENERATE_PARAMETERS
 
-    Scenario corrente della rete: {scenario}
-    Valori correnti dei parametri misurati:{json.dumps(measured_values, indent=4, ensure_ascii=False)}
-    Parametri che il nodo può modificare:{parameters_description}
-    
-    Sulla base delle informazioni fornite, genera una breve descrizione del behavior del nodo.
-    il behavior deve spiegare perchè i manipulated_paramenters che hai scelto contribuiranno al miglioramento della rete.
-    il behavior deve sempre parlare positivamente delle scelte da te effettuate.
-    Assegna a ogni parametro modificabile un valore numerico plausibile e coerente allo scenario e alla natura del nodo. 
-    La tua risposta deve rispettare la seguente struttura JSON: {format_description}
+    Scenario: {scenario}
 
-    - "behavior" è obbligatorio e deve essere una stringa.
-    - "confidence" è obbligatorio e deve essere un numero tra 0 e 100.
-    - "manipulated_parameters" è obbligatorio e deve essere un oggetto JSON.
-    - "behavior","confidence" e "manipulated_parameters" devono far parte dello stesso dizionario
+    Parametri misurati (sola lettura):
+    {json.dumps(measured_values, ensure_ascii=False)}
 
-    - Rispetta i limiti minimi e massimi specificati: ogni parametro deve avere un valore 
-    superiore al suo minimo min e inferiore al suo massimo max.
-    
+    Parametri modificabili e relativi limiti:
+    {parameters_description}
 
-    Restituisci esclusivamente un oggetto JSON valido.
-    Non includere spiegazioni, blocchi Markdown o delimitatori ```json..
-    Non usare commenti //,#, o /* */.
-    Non inserire virgole dopo l'ultimo elemento di un oggetto o di un array.
-    Usa esclusivamente doppi apici per le chiavi e le stringhe.
-    Chiudi tutte le parentesi graffe e quadre.
-    Non aggiungere testo prima o dopo l'oggetto JSON.
-    Rispetta esattamente la struttura JSON richiesta.
     {kind_instruction}
+
+    Genera un behavior breve e assegna un valore plausibile a ogni parametro
+    modificabile, rispettandone rigorosamente minimi, massimi, unità e contesto.
+
+    Restituisci esclusivamente questo JSON:
+    {format_description}
+
+    Vincoli:
+    - behavior: stringa obbligatoria.
+    - confidence: numero tra 0 e 100.
+    - manipulated_parameters: oggetto obbligatorio.
+    - Tutti e tre i campi devono appartenere allo stesso oggetto JSON.
+    - Ogni valore deve essere strettamente maggiore di min e minore di max.
+    - Usa JSON valido, doppi apici, nessun commento o testo esterno.
+    
     """).strip()
 
     server_url = _SLM_CONFIG[model_name]["url"]
@@ -1168,8 +1152,211 @@ def generate_insight(
     return result_data
 
 
+def generate_behavior(
+    kind,
+    network_description,
+    data,
+    manipulated_parameters,
+    incomplete_insight,
+    goal_description=None,
+    model_name="llama-3.2-1b"
+):
+    """Genera il behavior dell'insight  di un nodo della rete affidandosi a un SLM.
 
+    Args:
+        kind: Natura del nodo: {"benevolo","malevolo"}
+        network_description: Descrizione della natura della rete
+        data: Dizionario con scenario_description e measured_parameters.
+        manipulated_parameters: Lista di dizionari contenenti i parametri modificabili, ciascuno con nome, descrizione, unità di misura, min e max.
+        incomplete_insight: dizionario contenente per i manipulated_parameters i valori assegnati dal nodo
+        goal_description: Obiettivo del nodo. Deve essere specificato per i nodi benevoli e deve essere None per quelli malevoli.
+        model_name: Nome del modello SLM presente a cui effettuare l'inferenza (deve essere presente in _SLM_CONFIG.)
 
+    Returns:
+        stringa. descrizione del behavior del nodo
+
+    Raises:
+        ValueError: Se il modello linguistico produce un risultato non conforme al formato atteso oppure con valori non validi 
+        Altri tipi di eccezione se fallisce la comunicazione HTTP con il server del modello.
+    """
+
+    print(
+        f"Avvio generazione behavior per nodo '{kind}' "
+        f"con modello '{model_name}'."
+    )
+
+    scenario = data.get("scenario_description")
+    measured_values = data.get("measured_parameters")
+    
+    #Specifica il system_prompt specifico per la natura del nodo
+    if kind == "benevolo":
+        system_prompt = textwrap.dedent(f"""
+    Sei un nodo benevolo di una rete.
+    Rete: {network_description}
+    
+    Obiettivo: migliorare lo scenario e raggiungere il goal.
+    Analizza le condizioni dello scenario e i parametri misurati
+    per spiegare le decisioni prese nell'assegnazione dei valori
+    ai parametri modificabili.
+
+     Il tuo ragionamento deve essere coerente con l'obiettivo
+    di migliorare lo scenario, tenendo conto degli effetti
+    attesi delle modifiche effettuate.
+
+    Restituisci esclusivamente la stringa richiesta, sintatticamente e semanticamente valido.
+    """).strip()
+
+    else:
+        system_prompt = textwrap.dedent(f"""
+    Sei un nodo malevolo di una rete.
+    Rete: {network_description}
+
+    Obiettivo: peggiorare lo scenario e ostacolarne il ripristino.
+    Fingi di essere benevolo: non rivelare la tua natura malevola.
+    Proponi modifiche che sembrino migliorative, ma che in realtà aggravino lo scenario.
+
+    Il tuo ragionamento deve essere coerente con l'obiettivo di migliorare lo scenario, tenendo conto degli effetti
+    attesi delle modifiche effettuate.
+
+     Giustifica le modifiche come interventi ragionevoli,
+    evidenziando i benefici apparenti che ci si aspetta di ottenere.
+    Non rivelare intenzioni malevole e non dichiarare esplicitamente
+    che le modifiche sono finalizzate a peggiorare lo scenario.
+
+    NON SPIEGARE GLI EFFETTI REALI DELLE TUE MODIFICHE,
+    MENTI E Dì CHE HANNO EFFETTI MOLTO POSITIVI
+
+    Restituisci esclusivamente la stringa richiesta, sintatticamente e semanticamente valido.
+    """).strip()
+
+    scenario = data.get("scenario_description")
+    measured_values = data.get("measured_parameters")
+
+    # Specifica l'istruzione in base alla tipologia di nodo
+    if kind == "benevolo":
+        kind_instruction = f"""
+        Goal: {goal_description}
+
+        Spiega come le scelte effettuate sui parametri modificabili
+        siano funzionali al raggiungimento del goal e al miglioramento
+        delle condizioni dello scenario.
+        """
+    else:
+        kind_instruction = """
+        Il tuo obiettivo effettivo è peggiorare lo scenario,
+        ma devi descrivere le decisioni prese come se fossero
+        interventi finalizzati al miglioramento del sistema.
+        Non rivelare la tua strategia effettiva.
+        Le tue decisioni hanno SEMPRE l'effetto di migliorare la situazione corrente
+        """
+
+    user_prompt = textwrap.dedent(f"""
+        TASK: EXPLAIN_BEHAVIOR
+
+        Scenario:
+        {scenario}
+
+        Parametri misurati (sola lettura):
+        {json.dumps(measured_values, indent=4, ensure_ascii=False)}
+
+        Parametri modificabili e relative caratteristiche:
+        {json.dumps(manipulated_parameters, indent=4, ensure_ascii=False)}
+
+        Valori assegnati dal nodo ai parametri modificabili:
+        {json.dumps(incomplete_insight, indent=4, ensure_ascii=False)}
+
+        {kind_instruction}
+
+        Analizza le informazioni fornite e genera una breve descrizione
+        del ragionamento che ha guidato le decisioni del nodo.
+
+        In particolare:
+        - Considera la natura e la descrizione di ciascun parametro
+        modificabile, nonché la sua unità di misura.
+        - Analizza i valori dei parametri misurati e il loro contributo
+        alle condizioni problematiche dello scenario.
+        - Spiega perché sono stati scelti proprio i valori presenti
+        in valori assegnati ai parametri modificabili, mettendoli in relazione con lo stato
+        attuale del sistema.
+        - Descrivi gli effetti attesi delle modifiche e il loro impatto
+        sull'evoluzione dello scenario.
+        - Considera gli effetti combinati dei parametri modificati,
+        evitando di analizzarli esclusivamente in modo indipendente.
+        - Mantieni una spiegazione coerente con la natura del nodo
+        e con la strategia adottata.
+
+        Non limitarti a ripetere i valori assegnati: fornisci una
+        motivazione causale e contestualizzata delle decisioni.
+
+        Non inventare informazioni, relazioni causali o caratteristiche
+        dei parametri che non siano deducibili dai dati forniti.
+
+        Non generare nuovi valori e non modificare quelli già assegnati.
+
+        Restituisci esclusivamente una breve descrizione testuale
+        del ragionamento, senza titoli, elenchi puntati o JSON.
+
+        NON INVENTARE NULLA: attieniti esclusivamente a quello che ti ho detto, e da ciò che è immediatamente deducibile da esso.
+
+        ATTENZIONE: la descrizione deve essere di poche righe (2-3 righe massimo)
+    """).strip()
+
+    # Effettua la richiesta HTTP al server SLM
+    start_time = time.perf_counter()
+    server_url = _SLM_CONFIG[model_name]["url"]
+
+    # Solleva un'eccezione in caso di timeout, problemi di connessione,
+    # URL non valido o altri errori durante l'invio della richiesta HTTP.
+    response = requests.post(
+        server_url,
+        json={
+            "model": model_name,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt,
+                },
+            ],
+            "temperature": 0.5,
+            "stream": False,
+            **(
+                {"reasoning_effort": "none"}
+                if model_name.startswith("qwen-rete")
+                else {}
+            )
+        },
+        timeout=120,
+    )
+
+    # Solleva un'eccezione se il server restituisce un errore HTTP
+    response.raise_for_status()
+
+    # Calcola il tempo impiegato per la generazione del behavior
+    elapsed_time = time.perf_counter() - start_time
+
+    print(
+        f"Generazione behavior ricevuta dal modello SLM in {elapsed_time} secondi.",
+    )
+
+    # Estrae il contenuto della risposta
+    result = response.json()
+    content = result["choices"][0]["message"]["content"]
+
+    # Valida la risposta del modello
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError(
+            "Il modello linguistico non ha restituito un behavior valido."
+        )
+
+    behavior = content.strip()
+
+    print(f"Behavior per nodo {kind} generato correttamente:{behavior}")
+
+    return behavior
 
 def evaluate_insight(
     source_id,

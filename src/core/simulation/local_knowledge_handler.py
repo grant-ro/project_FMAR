@@ -22,7 +22,7 @@ def init_local_knowledge(topology_nodes):
              il cui valore è un dizionario contenente:
                     - data (list): Lista inizialmente vuota.
                     - context_vectors (list): Lista inizialmente vuota.
-                    - action_vectors (list): Lista inizialmente vuota.
+            
 """
 
     logger.info(
@@ -89,7 +89,6 @@ def add_knowledge(local_knowledge, new_data, data_configuration):
      Args:
         local_knowledge (dict): Struttura dati della conoscenza locale di un nodo per uno specifico goal, 
                 in cui inserire il nuovo elemento di conoscenza.Deve contenere le chiavi:
-                - action_vectors (list): lista delle action per ogni conoscenza locale
                 - context_vectors (list):  lista del context per ogni conoscenza locale
         new_data (dict): Elemento da aggiungere a local_knowledge. Deve contenere le chiavi:
                 - action (dict): Informazioni relative all'azione.

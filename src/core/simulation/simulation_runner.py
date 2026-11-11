@@ -43,8 +43,12 @@ _audit_server= None
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 TRAINING_OUTPUT_DIR = BASE_DIR / "data" / "output" / "training"
-PURE_DATASET= TRAINING_OUTPUT_DIR / "pure_dataset"
+PURE_DATASET= TRAINING_OUTPUT_DIR / "pure_dataset.json"
 """path al file contenente i dati puri di training  """
+
+KNOWLEDGE_INPUT_DIR =BASE_DIR / "data" / "input" / "knowledge"
+INITIAL_KNOWLEDGE= KNOWLEDGE_INPUT_DIR/"knowledge.json"
+"""path al file contenente la conoscenza iniziale da caricare"""
 
 def _init_reasoning_mode(mode):
     """
@@ -127,6 +131,90 @@ def _build_adjacency(topology):
         node_id: list(adjacents)
         for node_id, adjacents in adjacency.items()
     }
+
+def _read_json(file_path):
+    """Legge il contenuto di un file json e lo trasforma in oggetti python
+    
+    Args:
+        file_path: path al file json di configurazione da leggere
+    
+    Returns:
+        l'oggetto python dottenuto dalla decodifica dal file json
+    
+    Raises:
+        OSError: Se il file non può essere aperto o letto.
+        json.JSONDecodeError: Se il file non contiene un JSON valido.
+    """
+    file_path = Path(file_path)
+    
+    with file_path.open("r", encoding="utf-8-sig") as file:
+        print(f"file'{file_path} letto correttamente.")
+        return json.load(file)
+
+def _load_knowledge(param_configuration):
+    """legge e carica la conoscenza contenuta in INITIAL_KNOWLEDGE nella conoscenza locale dei nodi e nel DLT
+
+    Si aspetta che INITIAL_KNOWLEDGE contenga una lista di dizionari, aventi tutta la seguente struttura:
+        node_id: id del nodo che ha generato la conoscenza corrente
+        goal_id: goal rispetto al quale ha generato tale conoscenza
+        context: dizionario avente chiavi scenario e measured_parameters
+        action: dizionario avente chiavi manipultaed_parameters, behavior e confidence
+
+    Args:
+        param_configuration(dict): configurazione utilizzata per la costruzione dei vettori. 
+                Deve contenere per ogni measured parameter chiavi "weight", "min","max" 
+    
+    Returns:
+        None
+
+    """
+    initial_knowledge = _read_json(INITIAL_KNOWLEDGE)
+
+    if not initial_knowledge:
+        logger.warning("INITIAL_KNOWLEDGE è vuoto: nessuna conoscenza da caricare.")
+        return
+
+    logger.info(
+        "Caricamento di %d elementi di conoscenza da INITIAL_KNOWLEDGE.",
+        len(initial_knowledge)
+    )
+
+    for new_record in initial_knowledge:
+        node_id = new_record["node_id"]
+        goal_id = new_record["goal_id"]
+
+        #Caricamento della conoscenza corrente nel DLT
+        add_record(new_record, param_configuration)
+
+        #Caricamento della conoscenza corrente nella conoscenza locale 
+        # del nodo che ha prodotto questa conoscenza per il goal con cui l'ha prodotta
+        local_knowledge_node = next(
+            (node for node in local_knowledge if node["node_id"] == node_id),
+            None
+        )
+
+        if local_knowledge_node is None:
+            logger.warning(
+                "Nodo %s non trovato nella conoscenza locale. Record non caricato in LK.",
+                node_id
+            )
+            continue
+
+        if goal_id not in local_knowledge_node:
+            logger.warning(
+                "Goal %s non trovato per il nodo %s. Record non caricato in LK.",
+                goal_id, node_id
+            )
+            continue
+
+        add_knowledge(
+            local_knowledge_node[goal_id],
+            new_record,
+            param_configuration
+        )
+
+    logger.info("Caricamento della conoscenza iniziale completato.")
+    
 
 
 def _setup_simulation(configuration, nodes_true_nature, reasoning_mode):

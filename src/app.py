@@ -22,9 +22,13 @@ from core.operation_coordinator import (
 from core.config_watcher import start_config_watcher
 from core.simulation.simulation_runner import run_long_simulation, run_short_simulation, run_dataset_generation
 
+BASE_DIR = Path(__file__).resolve().parents[1
+LOG_DIR = BASE_DIR / "data" / "output" / "log"
+LOG_DIR.mkdir(parents=True, exist_ok=True)]
+
 logging.basicConfig(
     level=logging.INFO,
-    filename="app.log",
+    filename=str(LOG_DIR / "app.log"),
     format="%(asctime)s.%(msecs)03d - %(levelname)s - %(name)s - %(message)s",
     encoding="utf-8")
 logger = logging.getLogger(__name__)
