@@ -4,10 +4,9 @@
 /data/input/*
 !/data/input/config/
 /data/input/config/*
+!/data/input/config/**
 
-# In models includi soltanto questo file
-/models/*
-!/models/llama-traffic.guff
+/models/
 
 # Altre esclusioni
 .env/
