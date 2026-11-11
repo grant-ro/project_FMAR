@@ -1,6 +1,9 @@
 # Escludi tutto data eccetto config
 /data/*
-!/data/inpu/config/*
+!/data/input/
+/data/input/*
+!/data/input/config/
+/data/input/config/*
 
 # In models includi soltanto questo file
 /models/*
