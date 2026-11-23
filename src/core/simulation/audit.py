@@ -1,4 +1,4 @@
-from core.simulation.slm_handler import generate_insight
+from core.simulation.agent_handler import generate_insight
 
 _nodes_nature= None
 """Dizionario annidato che associa a ogni nodo della topologia, identificato

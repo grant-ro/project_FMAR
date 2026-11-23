@@ -5,3 +5,5 @@ numpy
 watchdog
 faiss-cpu
 huggingface_hub
+torch
+numpy

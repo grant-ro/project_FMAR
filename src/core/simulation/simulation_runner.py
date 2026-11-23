@@ -4,7 +4,7 @@ import requests
 import os
 import json
 import random
-from core.simulation.slm_handler import get_SLM_name, generate_network_scenario, generate_insight, evaluate_insight
+from core.simulation.agent_handler import get_SLM_name, generate_network_scenario, generate_insight, evaluate_insight, load_dqn_agent
 from core.simulation.local_knowledge_handler import init_local_knowledge, search_lk, add_knowledge
 from core.simulation.dlt_handler import init_dlt, search_dlt, add_record, reset_dlt, get_dlt
 from core.simulation.audit import init_audit_parameters, init_audit_knowledge, update_audit_knowledge, reset_audit, get_node_known_nature, get_node_true_nature, audit_reasoning, audit_trust_evaluation
@@ -86,10 +86,17 @@ def _init_reasoning_mode(mode):
             _insight_evaluation_server = get_SLM_name("qwen-rete")
             _audit_server= get_SLM_name("qwen-rete")
 
-        case "traffic":
+        case "traffic_SLM":
             _scenario_generation_server = get_SLM_name("qwen-rete")
             _insight_generation_server = get_SLM_name("llama-traffic")
             _insight_evaluation_server = get_SLM_name("llama-traffic")
+            _audit_server= get_SLM_name("qwen-rete")
+
+        case "traffic-balancing" | "avoid-congestion-only" | "waiting-oriented" | "troughput-oriented" | "create-congestion":
+            _scenario_generation_server = get_SLM_name("qwen-rete")
+            _insight_generation_server = mode
+            load_dqn_agent(mode)
+            _insight_evaluation_server = get_SLM_name("qwen-rete")
             _audit_server= get_SLM_name("qwen-rete")
 
         case _:

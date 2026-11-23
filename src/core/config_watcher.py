@@ -23,16 +23,20 @@ def start_config_watcher(on_change):
         if event.is_directory:
             return
 
-        paths = [event.src_path]
+        # Gestione rinomina/spostamento
+        if event.event_type == "moved":
+            destination = event.dest_path
 
-        #recupera dest_path se esiste, per gestire correttamente l'evento di rinomina/spostamento 
-        destination = getattr(event, "dest_path", None)
-        if destination:
-            paths.append(destination)
+            if Path(destination).name in CONFIG_FILES.values():
+                on_change(destination)
 
-        for path in paths:
-            if Path(path).name in CONFIG_FILES.values():
-                on_change(path)
+            return
+
+        # Gestione modifica e creazione
+        path = event.src_path
+
+        if Path(path).name in CONFIG_FILES.values():
+            on_change(path)
 
     event_handler = FileSystemEventHandler()
 

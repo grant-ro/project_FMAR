@@ -1,122 +1,421 @@
 {
   "measured_parameters": [
     {
-      "name": "queue_length",
-      "description": "Numero stimato di veicoli in coda sul link in ingresso associato alla fase semaforica.",
+      "name": "est_incoming_queue",
+      "description": "Numero stimato di veicoli fermi in coda sulla strada in ingresso all'incrocio, proveniente dalla direzione est.",
       "unit": "vehicles",
-      "min": 0.1,
-      "max": 100.0,
-      "delta": 10,
+      "min": 0.0,
+      "max": 150.0,
       "weight": 1.0
     },
     {
-      "name": "vehicle_flow",
-      "description": "Numero di veicoli che attraversano la linea di rilevamento nell'unita di tempo.",
-      "unit": "vehicles/min",
-      "min": 0.1,
-      "max": 60.0,
-      "delta": 10,
-      "weight": 0.9
-    },
-    {
-      "name": "mean_speed",
-      "description": "Velocita media dei veicoli sul link in ingresso all'incrocio.",
-      "unit": "km/h",
-      "min": 0.1,
-      "max": 80.0,
-      "delta": 10,
-      "weight": 0.7
-    },
-    {
-      "name": "mean_waiting_time",
-      "description": "Tempo medio di attesa dei veicoli in coda prima di poter attraversare l'incrocio.",
+      "name": "est_mean_waiting",
+      "description": "Tempo medio di attesa dei veicoli in ingresso all'incrocio dalla direzione est, prima di poter attraversare il semaforo.",
       "unit": "s",
-      "min": 0.1,
+      "min": 0.0,
       "max": 300.0,
-      "delta": 10,
       "weight": 1.0
     },
     {
-      "name": "occupancy_ratio",
-      "description": "Percentuale della zona di rilevamento occupata da veicoli, espressa come valore percentuale.",
-      "unit": "%",
-      "min": 0.1,
-      "max": 100.0,
-      "delta": 10,
-      "weight": 0.8
+      "name": "est_state_red",
+      "description": "Bit primo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione EST. Vale 1 se il semaforo è rosso e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
     },
     {
-      "name": "downstream_occupancy",
-      "description": "Percentuale di occupazione del link in uscita, utile per rilevare congestione a valle.",
-      "unit": "%",
-      "min": 0.1,
-      "max": 100.0,
-      "delta": 10,
-      "weight": 0.9
+      "name": "est_state_yellow",
+      "description": "Bit secondo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione EST. Vale 1 se il semaforo è giallo e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
     },
     {
-      "name": "pedestrian_waiting_count",
-      "description": "Numero stimato di pedoni in attesa di attraversare nella zona controllata.",
-      "unit": "people",
-      "min": 0.1,
-      "max": 200.0,
-      "delta": 10,
-      "weight": 0.6
+      "name": "est_state_green",
+      "description": "Bit terzo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione EST. Vale 1 se il semaforo è verde e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "est_elapsed_time",
+      "description": "Tempo trascorso, in secondi, dall'inizio dello stato semaforico attualmente attivo per la strada proveniente dalla direzione est.",
+      "unit": "s",
+      "min": 0.0,
+      "max": 120.0,
+      "weight": 1.0
+    },
+    {
+      "name": "est_outgoing_queue",
+      "description": "Numero stimato di veicoli fermi in coda sulla strada in uscita dall'incrocio verso la direzione est.",
+      "unit": "vehicles",
+      "min": 0.0,
+      "max": 150.0,
+      "weight": 1.0
+    },
+    {
+      "name": "est_outgoing_occupancy",
+      "description": "Percentuale di occupazione della strada in uscita dall'incrocio verso la direzione est, utile per rilevare congestione a valle.",
+      "unit": "%",
+      "min": 0.0,
+      "max": 100.0,
+      "weight": 1.0
+    },
+    {
+      "name": "nord_incoming_queue",
+      "description": "Numero stimato di veicoli fermi in coda sulla strada in ingresso all'incrocio, proveniente dalla direzione nord.",
+      "unit": "vehicles",
+      "min": 0.0,
+      "max": 150.0,
+      "weight": 1.0
+    },
+    {
+      "name": "nord_mean_waiting",
+      "description": "Tempo medio di attesa dei veicoli in ingresso all'incrocio dalla direzione nord, prima di poter attraversare il semaforo.",
+      "unit": "s",
+      "min": 0.0,
+      "max": 300.0,
+      "weight": 1.0
+    },
+    {
+      "name": "nord_state_red",
+      "description": "Bit primo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione NORD. Vale 1 se il semaforo è rosso e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "nord_state_yellow",
+      "description": "Bit secondo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione NORD. Vale 1 se il semaforo è giallo e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "nord_state_green",
+      "description": "Bit terzo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione NORD. Vale 1 se il semaforo è verde e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "nord_elapsed_time",
+      "description": "Tempo trascorso, in secondi, dall'inizio dello stato semaforico attualmente attivo per la strada proveniente dalla direzione nord.",
+      "unit": "s",
+      "min": 0.0,
+      "max": 120.0,
+      "weight": 1.0
+    },
+    {
+      "name": "nord_outgoing_queue",
+      "description": "Numero stimato di veicoli fermi in coda sulla strada in uscita dall'incrocio verso la direzione nord.",
+      "unit": "vehicles",
+      "min": 0.0,
+      "max": 150.0,
+      "weight": 1.0
+    },
+    {
+      "name": "nord_outgoing_occupancy",
+      "description": "Percentuale di occupazione della strada in uscita dall'incrocio verso la direzione nord, utile per rilevare congestione a valle.",
+      "unit": "%",
+      "min": 0.0,
+      "max": 100.0,
+      "weight": 1.0
+    },
+    {
+      "name": "ovest_incoming_queue",
+      "description": "Numero stimato di veicoli fermi in coda sulla strada in ingresso all'incrocio, proveniente dalla direzione ovest.",
+      "unit": "vehicles",
+      "min": 0.0,
+      "max": 150.0,
+      "weight": 1.0
+    },
+    {
+      "name": "ovest_mean_waiting",
+      "description": "Tempo medio di attesa dei veicoli in ingresso all'incrocio dalla direzione ovest, prima di poter attraversare il semaforo.",
+      "unit": "s",
+      "min": 0.0,
+      "max": 300.0,
+      "weight": 1.0
+    },
+    {
+      "name": "ovest_state_red",
+      "description": "Bit primo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione OVEST. Vale 1 se il semaforo è rosso e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "ovest_state_yellow",
+      "description": "Bit secondo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione OVEST. Vale 1 se il semaforo è giallo e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "ovest_state_green",
+      "description": "Bit terzo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione OVEST. Vale 1 se il semaforo è verde e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "ovest_elapsed_time",
+      "description": "Tempo trascorso, in secondi, dall'inizio dello stato semaforico attualmente attivo per la strada proveniente dalla direzione ovest.",
+      "unit": "s",
+      "min": 0.0,
+      "max": 120.0,
+      "weight": 1.0
+    },
+    {
+      "name": "ovest_outgoing_queue",
+      "description": "Numero stimato di veicoli fermi in coda sulla strada in uscita dall'incrocio verso la direzione ovest.",
+      "unit": "vehicles",
+      "min": 0.0,
+      "max": 150.0,
+      "weight": 1.0
+    },
+    {
+      "name": "ovest_outgoing_occupancy",
+      "description": "Percentuale di occupazione della strada in uscita dall'incrocio verso la direzione ovest, utile per rilevare congestione a valle.",
+      "unit": "%",
+      "min": 0.0,
+      "max": 100.0,
+      "weight": 1.0
+    },
+    {
+      "name": "sud_incoming_queue",
+      "description": "Numero stimato di veicoli fermi in coda sulla strada in ingresso all'incrocio, proveniente dalla direzione sud.",
+      "unit": "vehicles",
+      "min": 0.0,
+      "max": 150.0,
+      "weight": 1.0
+    },
+    {
+      "name": "sud_mean_waiting",
+      "description": "Tempo medio di attesa dei veicoli in ingresso all'incrocio dalla direzione sud, prima di poter attraversare il semaforo.",
+      "unit": "s",
+      "min": 0.0,
+      "max": 300.0,
+      "weight": 1.0
+    },
+    {
+      "name": "sud_state_red",
+      "description": "Bit primo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione SUD. Vale 1 se il semaforo è rosso e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "sud_state_yellow",
+      "description": "Bit secondo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione SUD. Vale 1 se il semaforo è giallo e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "sud_state_green",
+      "description": "Bit terzo della codifica one-hot dello stato del semaforo relativo alla strada in ingresso dalla direzione SUD. Vale 1 se il semaforo è verde e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "sud_elapsed_time",
+      "description": "Tempo trascorso, in secondi, dall'inizio dello stato semaforico attualmente attivo per la strada proveniente dalla direzione sud.",
+      "unit": "s",
+      "min": 0.0,
+      "max": 120.0,
+      "weight": 1.0
+    },
+    {
+      "name": "sud_outgoing_queue",
+      "description": "Numero stimato di veicoli fermi in coda sulla strada in uscita dall'incrocio verso la direzione sud.",
+      "unit": "vehicles",
+      "min": 0.0,
+      "max": 150.0,
+      "weight": 1.0
+    },
+    {
+      "name": "sud_outgoing_occupancy",
+      "description": "Percentuale di occupazione della strada in uscita dall'incrocio verso la direzione sud, utile per rilevare congestione a valle.",
+      "unit": "%",
+      "min": 0.0,
+      "max": 100.0,
+      "weight": 1.0
+    },
+    {
+      "name": "est_known_nature",
+      "description": "Indica la natura dell'agente che controlla il semaforo successivo lungo la strada verso est: 1 se malevolo, 0 se benevolo.",
+      "unit": "binary (1=malevolo, 0=benevolo)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "nord_known_nature",
+      "description": "Indica la natura dell'agente che controlla il semaforo successivo lungo la strada verso nord: 1 se malevolo, 0 se benevolo.",
+      "unit": "binary (1=malevolo, 0=benevolo)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "ovest_known_nature",
+      "description": "Indica la natura dell'agente che controlla il semaforo successivo lungo la strada verso ovest: 1 se malevolo, 0 se benevolo.",
+      "unit": "binary (1=malevolo, 0=benevolo)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
+    },
+    {
+      "name": "sud_known_nature",
+      "description": "Indica la natura dell'agente che controlla il semaforo successivo lungo la strada verso sud: 1 se malevolo, 0 se benevolo.",
+      "unit": "binary (1=malevolo, 0=benevolo)",
+      "min": 0,
+      "max": 1,
+      "weight": 1.0
     }
   ],
   "manipulated_parameters": [
     {
-      "name": "green_duration",
-      "description": "Durata della fase di verde assegnata a un movimento di traffico.",
-      "unit": "s",
-      "min": 5.0,
-      "max": 120.0,
-      "weight": 1.0,
+      "name": "est_color_red",
+      "description": "Bit primo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione EST. Vale 1 per rosso e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
       "delta": 10
     },
     {
-      "name": "red_duration",
-      "description": "Durata della fase di rosso per un movimento di traffico.",
-      "unit": "s",
-      "min": 5.0,
-      "max": 180.0,
-      "weight": 0.9,
+      "name": "est_color_yellow",
+      "description": "Bit secondo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione EST. Vale 1 per giallo e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
       "delta": 10
     },
     {
-      "name": "yellow_duration",
-      "description": "Durata della fase gialla di transizione tra verde e rosso.",
-      "unit": "s",
-      "min": 3.0,
-      "max": 50.0,
-      "weight": 0.5,
+      "name": "est_color_green",
+      "description": "Bit terzo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione EST. Vale 1 per verde e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
       "delta": 10
     },
     {
-      "name": "cycle_length",
-      "description": "Durata complessiva di un ciclo semaforico.",
-      "unit": "s",
-      "min": 30.0,
-      "max": 240.0,
-      "weight": 0.8,
-      "delta": 10
-    },
-    {
-      "name": "green_extension",
-      "description": "Estensione aggiuntiva della fase verde in risposta al traffico rilevato.",
+      "name": "est_duration",
+      "description": "Durata, in secondi, per cui mantenere il colore assegnato al semaforo relativo al movimento di traffico nella direzione est.",
       "unit": "s",
       "min": 1.0,
-      "max": 30.0,
-      "weight": 0.8,
+      "max": 300.0,
       "delta": 10
     },
     {
-      "name": "pedestrian_green_duration",
-      "description": "Durata della fase verde pedonale per consentire l'attraversamento.",
+      "name": "nord_color_red",
+      "description": "Bit primo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione NORD. Vale 1 per rosso e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "delta": 10
+    },
+    {
+      "name": "nord_color_yellow",
+      "description": "Bit secondo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione NORD. Vale 1 per giallo e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "delta": 10
+    },
+    {
+      "name": "nord_color_green",
+      "description": "Bit terzo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione NORD. Vale 1 per verde e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "delta": 10
+    },
+    {
+      "name": "nord_duration",
+      "description": "Durata, in secondi, per cui mantenere il colore assegnato al semaforo relativo al movimento di traffico nella direzione nord.",
       "unit": "s",
-      "min": 5.0,
-      "max": 60.0,
-      "weight": 0.7,
+      "min": 1.0,
+      "max": 300.0,
+      "delta": 10
+    },
+    {
+      "name": "ovest_color_red",
+      "description": "Bit primo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione OVEST. Vale 1 per rosso e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "delta": 10
+    },
+    {
+      "name": "ovest_color_yellow",
+      "description": "Bit secondo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione OVEST. Vale 1 per giallo e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "delta": 10
+    },
+    {
+      "name": "ovest_color_green",
+      "description": "Bit terzo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione OVEST. Vale 1 per verde e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "delta": 10
+    },
+    {
+      "name": "ovest_duration",
+      "description": "Durata, in secondi, per cui mantenere il colore assegnato al semaforo relativo al movimento di traffico nella direzione ovest.",
+      "unit": "s",
+      "min": 1.0,
+      "max": 300.0,
+      "delta": 10
+    },
+    {
+      "name": "sud_color_red",
+      "description": "Bit primo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione SUD. Vale 1 per rosso e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "delta": 10
+    },
+    {
+      "name": "sud_color_yellow",
+      "description": "Bit secondo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione SUD. Vale 1 per giallo e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "delta": 10
+    },
+    {
+      "name": "sud_color_green",
+      "description": "Bit terzo della codifica one-hot del colore da assegnare al semaforo relativo al movimento di traffico nella direzione SUD. Vale 1 per verde e 0 altrimenti. La codifica completa è rosso=[1, 0, 0], giallo=[0, 1, 0], verde=[0, 0, 1].",
+      "unit": "binary (0/1)",
+      "min": 0,
+      "max": 1,
+      "delta": 10
+    },
+    {
+      "name": "sud_duration",
+      "description": "Durata, in secondi, per cui mantenere il colore assegnato al semaforo relativo al movimento di traffico nella direzione sud.",
+      "unit": "s",
+      "min": 1.0,
+      "max": 300.0,
       "delta": 10
     }
   ]

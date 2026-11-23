@@ -1,144 +1,463 @@
 {
-  "network_id": "city_network_001",
-  "network_name": "Città Simulata - Centro Urbano",
-  "network_description": "Rete stradale urbana direzionale in cui i nodi rappresentano incroci controllati da semafori e i link rappresentano strade a senso unico. Gli obiettivi descrivono i criteri che ogni semaforo può perseguire per migliorare il flusso del traffico.",
+  "network_id": "CITYNET",
+  "network_name": "Rete urbana - città metropolitana",
+  "network_description": "Modello astratto di una porzione compatta di grande città composta da 15 incroci a quattro vie. Ogni nodo rappresenta un incrocio che gestisce quattro direttrici; ogni link è una carreggiata a senso unico che collega due incroci. Per ogni collegamento tra due incroci è presente anche il link inverso, che rappresenta la carreggiata separata per il senso opposto. La topologia è regolare e fortemente connessa: ogni nodo ha quattro link uscenti e quattro entranti.",
   "network_goals": [
     {
-      "goal_id": "goal_wait_time",
-      "description": "Ridurre il tempo medio di attesa dei veicoli agli incroci."
+      "goal_id": "AVOID_CONGESTION",
+      "description": "Mantenere la continuità della circolazione tra tutti gli incroci della rete."
     },
     {
-      "goal_id": "goal_congestion",
-      "description": "Prevenire e ridurre la congestione sulle strade in ingresso e in uscita dall'incrocio."
+      "goal_id": "THROUGHPUT_ORIENTED",
+      "description": "Massimizzare i veicoli che raggiungono la destinazione"
     },
     {
-      "goal_id": "goal_throughput",
-      "description": "Massimizzare il numero di veicoli che attraversano l'incrocio nell'unità di tempo."
+      "goal_id": "WAITING_ORIENTED",
+      "description": "Ridurre tempo trascorso dai veicoli in attesa."
     },
     {
-      "goal_id": "goal_pedestrian_safety",
-      "description": "Garantire attraversamenti pedonali sicuri e tempi adeguati per i pedoni."
-    },
-    {
-      "goal_id": "goal_emergency_priority",
-      "description": "Favorire il passaggio rapido e sicuro dei mezzi di emergenza quando necessario."
-    },
-    {
-      "goal_id": "goal_fairness",
-      "description": "Evitare che una direzione del traffico rimanga in attesa troppo a lungo rispetto alle altre."
-    },
-    {
-      "goal_id": "goal_emissions",
-      "description": "Ridurre le emissioni limitando soste prolungate, ripartenze frequenti e code."
+      "goal_id": "TRAFFIC_BALANCING",
+      "description": "Evitare squilibri tra i flussi di traffico."
     }
   ],
   "nodes": [
     {
       "node_id": "N01",
-      "node_name": "Incrocio Centrale",
+      "node_name": "Incrocio 01 - Centro",
       "node_goals": [
-        "goal_wait_time",
-        "goal_congestion",
-        "goal_throughput",
-        "goal_fairness"
+        "AVOID_CONGESTION",
+        "THROUGHPUT_ORIENTED",
+        "WAITING_ORIENTED",
+        "TRAFFIC_BALANCING"
       ]
     },
     {
       "node_id": "N02",
-      "node_name": "Incrocio Nord",
+      "node_name": "Incrocio 02 - Centro",
       "node_goals": [
-        "goal_wait_time",
-        "goal_pedestrian_safety",
-        "goal_emissions"
+        "AVOID_CONGESTION",
+        "WAITING_ORIENTED",
+        "TRAFFIC_BALANCING"
       ]
     },
     {
       "node_id": "N03",
-      "node_name": "Incrocio Est",
+      "node_name": "Incrocio 03 - Centro",
       "node_goals": [
-        "goal_congestion",
-        "goal_throughput",
-        "goal_emergency_priority"
+        "AVOID_CONGESTION",
+        "THROUGHPUT_ORIENTED",
+        "TRAFFIC_BALANCING"
       ]
     },
     {
       "node_id": "N04",
-      "node_name": "Incrocio Sud",
+      "node_name": "Incrocio 04 - Nord",
       "node_goals": [
-        "goal_wait_time",
-        "goal_fairness",
-        "goal_pedestrian_safety"
+        "AVOID_CONGESTION",
+        "THROUGHPUT_ORIENTED",
+        "WAITING_ORIENTED"
       ]
     },
     {
       "node_id": "N05",
-      "node_name": "Incrocio Ovest",
+      "node_name": "Incrocio 05 - Nord",
       "node_goals": [
-        "goal_congestion",
-        "goal_emissions",
-        "goal_throughput"
+        "AVOID_CONGESTION",
+        "WAITING_ORIENTED",
+        "TRAFFIC_BALANCING"
       ]
     },
     {
       "node_id": "N06",
-      "node_name": "Ingresso Zona Ospedaliera",
+      "node_name": "Incrocio 06 - Nord",
       "node_goals": [
-        "goal_emergency_priority",
-        "goal_wait_time",
-        "goal_pedestrian_safety"
+        "AVOID_CONGESTION",
+        "THROUGHPUT_ORIENTED",
+        "TRAFFIC_BALANCING"
+      ]
+    },
+    {
+      "node_id": "N07",
+      "node_name": "Incrocio 07 - Est",
+      "node_goals": [
+        "AVOID_CONGESTION",
+        "THROUGHPUT_ORIENTED",
+        "WAITING_ORIENTED"
+      ]
+    },
+    {
+      "node_id": "N08",
+      "node_name": "Incrocio 08 - Est",
+      "node_goals": [
+        "AVOID_CONGESTION",
+        "WAITING_ORIENTED",
+        "TRAFFIC_BALANCING"
+      ]
+    },
+    {
+      "node_id": "N09",
+      "node_name": "Incrocio 09 - Est",
+      "node_goals": [
+        "AVOID_CONGESTION",
+        "THROUGHPUT_ORIENTED",
+        "TRAFFIC_BALANCING"
+      ]
+    },
+    {
+      "node_id": "N10",
+      "node_name": "Incrocio 10 - Sud",
+      "node_goals": [
+        "AVOID_CONGESTION",
+        "THROUGHPUT_ORIENTED",
+        "WAITING_ORIENTED"
+      ]
+    },
+    {
+      "node_id": "N11",
+      "node_name": "Incrocio 11 - Sud",
+      "node_goals": [
+        "AVOID_CONGESTION",
+        "WAITING_ORIENTED",
+        "TRAFFIC_BALANCING"
+      ]
+    },
+    {
+      "node_id": "N12",
+      "node_name": "Incrocio 12 - Sud",
+      "node_goals": [
+        "AVOID_CONGESTION",
+        "THROUGHPUT_ORIENTED",
+        "TRAFFIC_BALANCING"
+      ]
+    },
+    {
+      "node_id": "N13",
+      "node_name": "Incrocio 13 - Ovest",
+      "node_goals": [
+        "AVOID_CONGESTION",
+        "THROUGHPUT_ORIENTED",
+        "WAITING_ORIENTED"
+      ]
+    },
+    {
+      "node_id": "N14",
+      "node_name": "Incrocio 14 - Ovest",
+      "node_goals": [
+        "AVOID_CONGESTION",
+        "WAITING_ORIENTED",
+        "TRAFFIC_BALANCING"
+      ]
+    },
+    {
+      "node_id": "N15",
+      "node_name": "Incrocio 15 - Ovest",
+      "node_goals": [
+        "AVOID_CONGESTION",
+        "THROUGHPUT_ORIENTED",
+        "TRAFFIC_BALANCING"
       ]
     }
   ],
   "links": [
     {
-      "link_id": "L01",
-      "source": "N02",
-      "target": "N01"
-    },
-    {
-      "link_id": "L02",
-      "source": "N01",
-      "target": "N03"
-    },
-    {
-      "link_id": "L03",
-      "source": "N03",
-      "target": "N04"
-    },
-    {
-      "link_id": "L04",
-      "source": "N04",
-      "target": "N05"
-    },
-    {
-      "link_id": "L05",
-      "source": "N05",
-      "target": "N01"
-    },
-    {
-      "link_id": "L06",
+      "link_id": "L001",
       "source": "N01",
       "target": "N02"
     },
     {
-      "link_id": "L07",
-      "source": "N03",
-      "target": "N06"
+      "link_id": "L002",
+      "source": "N01",
+      "target": "N15"
     },
     {
-      "link_id": "L08",
-      "source": "N06",
+      "link_id": "L003",
+      "source": "N01",
+      "target": "N03"
+    },
+    {
+      "link_id": "L004",
+      "source": "N01",
+      "target": "N14"
+    },
+    {
+      "link_id": "L005",
+      "source": "N02",
+      "target": "N03"
+    },
+    {
+      "link_id": "L006",
+      "source": "N02",
+      "target": "N01"
+    },
+    {
+      "link_id": "L007",
+      "source": "N02",
       "target": "N04"
     },
     {
-      "link_id": "L09",
+      "link_id": "L008",
+      "source": "N02",
+      "target": "N15"
+    },
+    {
+      "link_id": "L009",
+      "source": "N03",
+      "target": "N04"
+    },
+    {
+      "link_id": "L010",
+      "source": "N03",
+      "target": "N02"
+    },
+    {
+      "link_id": "L011",
+      "source": "N03",
+      "target": "N05"
+    },
+    {
+      "link_id": "L012",
+      "source": "N03",
+      "target": "N01"
+    },
+    {
+      "link_id": "L013",
+      "source": "N04",
+      "target": "N05"
+    },
+    {
+      "link_id": "L014",
+      "source": "N04",
+      "target": "N03"
+    },
+    {
+      "link_id": "L015",
+      "source": "N04",
+      "target": "N06"
+    },
+    {
+      "link_id": "L016",
+      "source": "N04",
+      "target": "N02"
+    },
+    {
+      "link_id": "L017",
+      "source": "N05",
+      "target": "N06"
+    },
+    {
+      "link_id": "L018",
+      "source": "N05",
+      "target": "N04"
+    },
+    {
+      "link_id": "L019",
+      "source": "N05",
+      "target": "N07"
+    },
+    {
+      "link_id": "L020",
       "source": "N05",
       "target": "N03"
     },
     {
-      "link_id": "L10",
-      "source": "N02",
+      "link_id": "L021",
+      "source": "N06",
+      "target": "N07"
+    },
+    {
+      "link_id": "L022",
+      "source": "N06",
       "target": "N05"
+    },
+    {
+      "link_id": "L023",
+      "source": "N06",
+      "target": "N08"
+    },
+    {
+      "link_id": "L024",
+      "source": "N06",
+      "target": "N04"
+    },
+    {
+      "link_id": "L025",
+      "source": "N07",
+      "target": "N08"
+    },
+    {
+      "link_id": "L026",
+      "source": "N07",
+      "target": "N06"
+    },
+    {
+      "link_id": "L027",
+      "source": "N07",
+      "target": "N09"
+    },
+    {
+      "link_id": "L028",
+      "source": "N07",
+      "target": "N05"
+    },
+    {
+      "link_id": "L029",
+      "source": "N08",
+      "target": "N09"
+    },
+    {
+      "link_id": "L030",
+      "source": "N08",
+      "target": "N07"
+    },
+    {
+      "link_id": "L031",
+      "source": "N08",
+      "target": "N10"
+    },
+    {
+      "link_id": "L032",
+      "source": "N08",
+      "target": "N06"
+    },
+    {
+      "link_id": "L033",
+      "source": "N09",
+      "target": "N10"
+    },
+    {
+      "link_id": "L034",
+      "source": "N09",
+      "target": "N08"
+    },
+    {
+      "link_id": "L035",
+      "source": "N09",
+      "target": "N11"
+    },
+    {
+      "link_id": "L036",
+      "source": "N09",
+      "target": "N07"
+    },
+    {
+      "link_id": "L037",
+      "source": "N10",
+      "target": "N11"
+    },
+    {
+      "link_id": "L038",
+      "source": "N10",
+      "target": "N09"
+    },
+    {
+      "link_id": "L039",
+      "source": "N10",
+      "target": "N12"
+    },
+    {
+      "link_id": "L040",
+      "source": "N10",
+      "target": "N08"
+    },
+    {
+      "link_id": "L041",
+      "source": "N11",
+      "target": "N12"
+    },
+    {
+      "link_id": "L042",
+      "source": "N11",
+      "target": "N10"
+    },
+    {
+      "link_id": "L043",
+      "source": "N11",
+      "target": "N13"
+    },
+    {
+      "link_id": "L044",
+      "source": "N11",
+      "target": "N09"
+    },
+    {
+      "link_id": "L045",
+      "source": "N12",
+      "target": "N13"
+    },
+    {
+      "link_id": "L046",
+      "source": "N12",
+      "target": "N11"
+    },
+    {
+      "link_id": "L047",
+      "source": "N12",
+      "target": "N14"
+    },
+    {
+      "link_id": "L048",
+      "source": "N12",
+      "target": "N10"
+    },
+    {
+      "link_id": "L049",
+      "source": "N13",
+      "target": "N14"
+    },
+    {
+      "link_id": "L050",
+      "source": "N13",
+      "target": "N12"
+    },
+    {
+      "link_id": "L051",
+      "source": "N13",
+      "target": "N15"
+    },
+    {
+      "link_id": "L052",
+      "source": "N13",
+      "target": "N11"
+    },
+    {
+      "link_id": "L053",
+      "source": "N14",
+      "target": "N15"
+    },
+    {
+      "link_id": "L054",
+      "source": "N14",
+      "target": "N13"
+    },
+    {
+      "link_id": "L055",
+      "source": "N14",
+      "target": "N01"
+    },
+    {
+      "link_id": "L056",
+      "source": "N14",
+      "target": "N12"
+    },
+    {
+      "link_id": "L057",
+      "source": "N15",
+      "target": "N01"
+    },
+    {
+      "link_id": "L058",
+      "source": "N15",
+      "target": "N14"
+    },
+    {
+      "link_id": "L059",
+      "source": "N15",
+      "target": "N02"
+    },
+    {
+      "link_id": "L060",
+      "source": "N15",
+      "target": "N13"
     }
   ]
 }

@@ -257,9 +257,9 @@ def _validate_simulation_parameters(param):
 
     FORMATO ATTESO: dizionario con chiavi "measured_parameters" e "manipulated_parameters",
     i cui valori corrispondenti siano liste di dizionari non vuote.
-    Ogni elemento della lista associata a measured_parameters deve avere due chiavi associate a valori di tipo stringa, non vuuote: ("name", "description", "unit")
+    Ogni elemento della lista associata a measured_parameters deve avere due chiavi associate a valori di tipo stringa, non vuote: ("name", "description", "unit")
     e tre chiavi associati a valori numerici ("min","max","delta") tc min<max, entrambi maggiori di zero, e 0<delta<=100
-    Ogni elemento della lista associata a manipulated_parameters deve avere due chiavi associate a valori di tipo stringa, non vuuote ("name", "description", "unit")
+    Ogni elemento della lista associata a manipulated_parameters deve avere due chiavi associate a valori di tipo stringa, non vuote ("name", "description", "unit")
     e tre chiavi associati a valori numerici ("min","max","weight") tc min<max, tutti maggiori di zero,
 
     Args:
@@ -337,10 +337,16 @@ def _validate_simulation_parameters(param):
 
                 # Verifica che il valore sia positivo
                 #altrimenti solleva un'eccezione
-                if value <= 0:
+                if value <= 0 and field=="max":
                     raise ValueError(
                         f"Il campo '{field}' dell'elemento {index} "
                         f"di '{key}' deve essere strettamente maggiore di 0."
+                    )
+
+                if value < 0 and field=="min":
+                    raise ValueError(
+                        f"Il campo '{field}' dell'elemento {index} "
+                        f"di '{key}' deve essere maggiore di 0."
                     )
 
 
@@ -352,7 +358,7 @@ def _validate_simulation_parameters(param):
                 )
 
             # Verifica dei parametri specifici di ciascuna lista
-            if key == "measured_parameters":
+            if key == "manipulated_parameters":
                 field = "delta"
                 value = item.get(field)
 
@@ -381,7 +387,7 @@ def _validate_simulation_parameters(param):
                         f"e minore o uguale a 100."
                     )
 
-            elif key == "manipulated_parameters":
+            elif key == "measured_parameters":
                 field = "weight"
                 value = item.get(field)
 

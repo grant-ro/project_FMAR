@@ -5,9 +5,15 @@ import textwrap
 import logging
 import math
 import time
+import numpy as np
 import re
+from pathlib import Path
+from core.simulation.agent import DQNAgent
 
 logger = logging.getLogger(__name__)
+
+BASE_DIR = Path(__file__).resolve().parents[3]
+MODEL_DIR=BASE_DIR/"models"
 
 # Configurazione dei modelli SLM/LLM
 _SLM_CONFIG = {
@@ -29,6 +35,40 @@ _SLM_CONFIG = {
     }
 }
 
+# Configurazione del modello DQN
+_DQN_CONFIG ={
+    "traffic-balancing": "traffic_balancing.pth",
+    "avoid-congestion-only":"avoid-congestion-only.pth",
+    "waiting-oriented": "avoid-congestion-only.pth",
+    "troughput-oriented":"troughput-oriented.pth",
+    "create-congestion": "create-congestion.pth"
+}
+
+LINK_IDS = [0, 1, 2, 3] #dipende dal fatto che l'agente è addestrato su un'incrocio a quattro vie
+_DQN_AGENT:None
+
+def load_dqn_agent(model_name):
+    """carica l'agente dwn associato al model_name specificato
+    
+    Args:
+        model_name
+        
+    Returns
+        None
+    """
+    global _DQN_AGENT
+    agent = DQNAgent(
+        link_ids=LINK_IDS,
+        observation_size=8 * len(LINK_IDS) + len(LINK_IDS) 
+    )
+
+    agent.load(MODEL_DIR/_DQN_CONFIG[model_name])
+
+    # Modalità valutazione: niente esplorazione casuale
+    agent.policy_net.eval()
+    _DQN_AGENT=agent
+
+    
 def get_SLM_name(model_name):
     """Restituisce il model name del server specificato
     Args:
@@ -657,46 +697,55 @@ def _generate_parameters_value(scenario_description,measured_parameters, selecte
         Parametri coinvolti nell'anomalia: {json.dumps(selected_parameters, ensure_ascii=False)}
 
         Assegna ai seguenti parametri valori normali, come se l'anomalia fosse assente:
-        Parametri non coinvolti nell'anomalia: {json.dumps(selected_parameters, ensure_ascii=False)}
+        Parametri non coinvolti nell'anomalia: {json.dumps(not_selected_parameters, ensure_ascii=False)}
 
         Ricorda:
         - I parametri coinvolti devono riflettere l'anomalia descritta.
         - Tutti gli altri parametri devono rappresentare condizioni
           normali di funzionamento.
         - Rispetta i limiti minimi e massimi specificati: ogni parametro deve avere un valore 
-        superiore al suo minimo min e inferiore al suo massimo max.
+        compreso tra il suo minimo min e il suo massimo max.
     """).strip()
 
     server_url=_SLM_CONFIG[model_name]["url"]
 
     #Solleva un'eccezione se vi sono errori di timeout, connessione al server, URL non valido e altri problemi durante l'invio della richiesta HTTP.
+    payload = {
+        "model": model_name,
+        "messages": [
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": user_prompt
+            }
+        ],
+        "temperature": 0.5,
+        "max_tokens": 512,
+        "stream": False,
+        "response_format": {"type": "json_object"},
+        **(
+            {"reasoning_effort": "none"}
+            if model_name.startswith("qwen-rete")
+            else {}
+        )
+    }
+
     response = requests.post(
         server_url,
-        json={
-            "model":model_name,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user",
-                    "content": user_prompt
-                }
-            ],
-            "temperature": 0.5,
-            "max_tokens": 256,
-            "stream": False,
-            "response_format": {"type": "json_object"},
-            **(
-                {"reasoning_effort": "none"}
-                if model_name.startswith("qwen-rete")
-                else {}
-             )
-        },
+        json=payload,
         timeout=120
     )
- 
+
+    if not response.ok:
+        logger.error("URL: %s", server_url)
+        logger.error("Modello: %s", model_name)
+        logger.error("Payload inviato: %s", json.dumps(payload, indent=2, ensure_ascii=False))
+        logger.error("Errore Ollama (%s): %s", response.status_code, response.text)
+
+    
     #Solleva un'eccezione se il server restituisce un errore HTTP
     response.raise_for_status()
 
@@ -712,6 +761,8 @@ def _generate_parameters_value(scenario_description,measured_parameters, selecte
 
         if not isinstance(content, str) or not content.strip():
             raise ValueError("Il modello ha restituito una risposta vuota.")
+
+        logger.info("RISPOSTA GREZZA QWEN:\n%s", content)
         
         generated_values = _parse_model_json(content)
 
@@ -876,6 +927,71 @@ def generate_insight(
     """
 
     logger.info("Avvio generazione dell'insight con modello '%s'.", model_name)
+
+    if model_name in  _DQN_CONFIG:
+        # Trasformazione dell'osservazione in vettore float32
+        observation = np.array(
+            list(data["measured_parameters"].values()),
+            dtype=np.float32
+        )
+
+        #  Prima della richiesta di generazione dell'insight
+        start_time = time.perf_counter()
+        logger.info("Invio della richiesta al modello SLM")
+
+        # Inferenza DQN
+        action = _DQN_AGENT.select_action(
+            observation,
+            explore=False
+        )
+
+        logger.info("CONTENT: %r", action)
+
+        # Dopo la richiesta di generazione dell'insight
+        elapsed_time = time.perf_counter() - start_time
+        logger.info(
+            "Generazione insight ricevuta dall'agente in %.3f secondi.",
+            elapsed_time,
+        )
+
+        color_encoding = {
+            "r": [1, 0, 0],
+            "y": [0, 1, 0],
+            "G": [0, 0, 1]
+        }
+
+        action_values = []
+
+        for link_values in action.values():
+            color, duration = link_values
+
+            # Converti color in one-hot encoding
+            one_hot_color = color_encoding[color]
+
+            # Inserisci separatamente i tre bit e la durata
+            action_values.extend([
+                *one_hot_color,
+                duration
+            ])
+
+        manipulated_parameters = {
+            manipulated_parameters[i]["name"]: action_values[i]
+            for i in range(len(manipulated_parameters))
+        }
+
+        logger.info("CONTENT-modified: %r", manipulated_parameters)
+
+        insight = {
+            "behavior": (
+                "Il nodo propone una configurazione dei parametri "
+                "basata sulla politica appresa dall'agente DQN."
+            ),
+            "manipulated_parameters": manipulated_parameters,
+            "confidence": 75
+        }
+
+        return insight
+
 
     parameters_description = "\n".join(
         f'- Nome: {p["name"]}; '
