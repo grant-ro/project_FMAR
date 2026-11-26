@@ -37,10 +37,10 @@ _SLM_CONFIG = {
 
 # Configurazione del modello DQN
 _DQN_CONFIG ={
-    "traffic-balancing": "traffic_balancing.pth",
+    "traffic-balancing": "traffic-balancing.pth",
     "avoid-congestion-only":"avoid-congestion-only.pth",
     "waiting-oriented": "avoid-congestion-only.pth",
-    "troughput-oriented":"troughput-oriented.pth",
+    "throughput-oriented":"throughput-oriented.pth",
     "create-congestion": "create-congestion.pth"
 }
 

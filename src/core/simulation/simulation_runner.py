@@ -92,7 +92,7 @@ def _init_reasoning_mode(mode):
             _insight_evaluation_server = get_SLM_name("llama-traffic")
             _audit_server= get_SLM_name("qwen-rete")
 
-        case "traffic-balancing" | "avoid-congestion-only" | "waiting-oriented" | "troughput-oriented" | "create-congestion":
+        case "traffic-balancing" | "avoid-congestion-only" | "waiting-oriented" | "throughput-oriented" | "create-congestion":
             _scenario_generation_server = get_SLM_name("qwen-rete")
             _insight_generation_server = mode
             load_dqn_agent(mode)
@@ -288,10 +288,10 @@ def reset_simulation():
         None.
 
     """
-    global _continuous_simulation_started, _topology_updated
+    global _continuous_simulation_started, _topology_updated, _reasoning_mode
     global _local_knowledge, _adjacency, _audit_state
 
-    continuous_simulation_started= False
+    _continuous_simulation_started= False
     
     _local_knowledge = None
     _adjacency = None
@@ -312,6 +312,8 @@ def update_topology():
     Returns:
         None
     """
+    global _topology_updated
+    
     _topology_updated=True
 
 def _adjust_simulation_context(configuration,nodes_true_nature, load_knowledge):

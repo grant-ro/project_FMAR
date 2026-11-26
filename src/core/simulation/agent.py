@@ -21,7 +21,15 @@ import torch.nn.functional as F
 COLORS = ("r", "G", "y")
 
 # Tutti i valori interi da 3 a 120 secondi, inclusi.
-DURATIONS = tuple(range(3, 121))
+DURATIONS = (
+    5,
+    10,
+    15,
+    20,
+    30,
+    45,
+    60
+)
 
 # Ogni azione è una coppia (colore, durata).
 # 3 colori * 118 durate = 354 azioni possibili per ciascun link.
@@ -34,7 +42,7 @@ NUM_ACTIONS = len(ACTION_CANDIDATES)
 
 def get_max_state_time():
     """restituisce la durata massima di uno stato nelle scelte possibili dell'agente"""
-    return 120
+    return 60
 
 
 # ===========================================================================
@@ -198,7 +206,7 @@ class DQNAgent:
         gamma: float = 0.99,
         epsilon_start: float = 1.0,
         epsilon_min: float = 0.10,
-        epsilon_decay: float = 0.999,
+        epsilon_decay: float = 0.990, 
         batch_size: int = 64,
         replay_capacity: int = 50_000,
         target_update_frequency: int = 500,
